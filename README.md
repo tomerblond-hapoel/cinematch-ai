@@ -7,6 +7,9 @@ Final project — AI & ML Innovation Workshop 2025.
 ## Live Demo
 Deployed on Render.com: [link added after deploy]
 
+## GitHub
+https://github.com/tomerblond-hapoel/cinematch-ai
+
 ## Setup
 
 ```bash
@@ -83,4 +86,4 @@ python tests/test_cases.py
 3. Build command: `pip install -r requirements.txt`
 4. Start command: `streamlit run app.py --server.port $PORT --server.address 0.0.0.0`
 5. Add env var: `ANTHROPIC_API_KEY=sk-ant-...`
-6. Add the pre-built data files via Render Disks (or commit the parquet/npy to the repo for simplicity).
+6. Data files (catalog.parquet, embeddings.npy) are already committed to the repo — Render will pick them up automatically.
