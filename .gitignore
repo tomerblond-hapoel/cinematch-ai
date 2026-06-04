@@ -2,10 +2,5 @@
 __pycache__/
 *.pyc
 *.pyo
-data/*.parquet
-data/*.npy
-data/*.npz
-data/*.csv
-data/*.json
 .streamlit/secrets.toml
 *.DS_Store

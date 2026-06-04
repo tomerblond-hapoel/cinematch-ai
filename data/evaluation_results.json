@@ -1,0 +1,30 @@
+{
+  "spearman": {
+    "Jaccard vs Cosine-numeric": 0.1903,
+    "Jaccard vs Cosine-text": 0.4955,
+    "Cosine-numeric vs Cosine-text": 0.0622,
+    "Jaccard vs Hybrid": 0.7638,
+    "Cosine-numeric vs Hybrid": 0.6189,
+    "Cosine-text vs Hybrid": 0.6552
+  },
+  "agreement_at_10": {
+    "Jaccard vs Cosine-numeric": 0.069,
+    "Jaccard vs Cosine-text": 0.1818,
+    "Cosine-numeric vs Cosine-text": 0.031,
+    "Jaccard vs Hybrid": 0.5894,
+    "Cosine-text vs Hybrid": 0.3004
+  },
+  "precision_at_5": {
+    "Jaccard": 0.1111,
+    "Cosine-numeric": 0.0,
+    "Cosine-text": 0.2222,
+    "Hybrid": 0.2222
+  },
+  "anomaly_threshold_5pct": 0.7405,
+  "best_score_stats": {
+    "mean": 0.8573,
+    "median": 0.8708,
+    "p5": 0.7405,
+    "p25": 0.8121
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "sources": {
+    "tmdb_tvs": {
+      "raw": 152970,
+      "clean": 10931,
+      "dropped": 142039,
+      "drop_pct": 92.9
+    },
+    "disney_plus": {
+      "raw": 992,
+      "clean": 187,
+      "dropped": 805,
+      "drop_pct": 81.1
+    },
+    "imdb_all": {
+      "raw": 10000,
+      "clean": 1327,
+      "dropped": 8673,
+      "drop_pct": 86.7
+    },
+    "imdb_top5000": {
+      "raw": 2626,
+      "clean": 2626,
+      "dropped": 0,
+      "drop_pct": 0.0
+    }
+  },
+  "total_raw": 166588,
+  "total_clean": 11013,
+  "pre_dedupe": 15071,
+  "post_dedupe": 11013,
+  "deduped": 4058,
+  "drop_rate_overall": 93.4
+}
