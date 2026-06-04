@@ -5,7 +5,7 @@ Final project — AI & ML Innovation Workshop 2025.
 **Author:** Tomer Blond
 
 ## Live Demo
-Live Demo: https://oops-markers-implement-considers.trycloudflare.com (Cloudflare Tunnel — active while Mac is on)
+Live Demo: https://supports-actual-plain-mins.trycloudflare.com (Cloudflare Tunnel — active while Mac is on)
 
 ## GitHub
 https://github.com/tomerblond-hapoel/cinematch-ai
