@@ -1,0 +1,253 @@
+{
+  "decade_stats": [
+    {
+      "decade_str": "1940s",
+      "n_shows": 3,
+      "avg_rating": 6.763,
+      "median_rating": 6.769,
+      "total_votes": 49.0
+    },
+    {
+      "decade_str": "1950s",
+      "n_shows": 46,
+      "avg_rating": 7.14,
+      "median_rating": 7.17,
+      "total_votes": 195020.0
+    },
+    {
+      "decade_str": "1960s",
+      "n_shows": 151,
+      "avg_rating": 7.095,
+      "median_rating": 7.214,
+      "total_votes": 709239.0
+    },
+    {
+      "decade_str": "1970s",
+      "n_shows": 269,
+      "avg_rating": 7.297,
+      "median_rating": 7.3,
+      "total_votes": 901999.0
+    },
+    {
+      "decade_str": "1980s",
+      "n_shows": 462,
+      "avg_rating": 7.266,
+      "median_rating": 7.3,
+      "total_votes": 3408721.0
+    },
+    {
+      "decade_str": "1990s",
+      "n_shows": 782,
+      "avg_rating": 7.182,
+      "median_rating": 7.253,
+      "total_votes": 10705623.0
+    },
+    {
+      "decade_str": "2000s",
+      "n_shows": 1692,
+      "avg_rating": 7.261,
+      "median_rating": 7.4,
+      "total_votes": 31876164.0
+    },
+    {
+      "decade_str": "2010s",
+      "n_shows": 4801,
+      "avg_rating": 7.242,
+      "median_rating": 7.311,
+      "total_votes": 70329394.0
+    },
+    {
+      "decade_str": "2020s",
+      "n_shows": 2779,
+      "avg_rating": 7.257,
+      "median_rating": 7.313,
+      "total_votes": 39900804.0
+    }
+  ],
+  "top_rising_genres": [
+    {
+      "genre": "Thriller",
+      "modern_count": 191,
+      "classic_count": 7,
+      "modern_share": 1.2,
+      "classic_share": 0.19,
+      "rise_ratio": 4.529
+    },
+    {
+      "genre": "Biography",
+      "modern_count": 94,
+      "classic_count": 3,
+      "modern_share": 0.59,
+      "classic_share": 0.08,
+      "rise_ratio": 3.832
+    },
+    {
+      "genre": "Reality",
+      "modern_count": 356,
+      "classic_count": 22,
+      "modern_share": 2.23,
+      "classic_share": 0.59,
+      "rise_ratio": 3.398
+    },
+    {
+      "genre": "Reality-Tv",
+      "modern_count": 31,
+      "classic_count": 1,
+      "modern_share": 0.19,
+      "classic_share": 0.03,
+      "rise_ratio": 2.325
+    },
+    {
+      "genre": "History",
+      "modern_count": 110,
+      "classic_count": 9,
+      "modern_share": 0.69,
+      "classic_share": 0.24,
+      "rise_ratio": 2.324
+    },
+    {
+      "genre": "Documentary",
+      "modern_count": 692,
+      "classic_count": 71,
+      "modern_share": 4.34,
+      "classic_share": 1.89,
+      "rise_ratio": 2.228
+    },
+    {
+      "genre": "Mystery",
+      "modern_count": 925,
+      "classic_count": 116,
+      "modern_share": 5.8,
+      "classic_share": 3.09,
+      "rise_ratio": 1.849
+    },
+    {
+      "genre": "Crime",
+      "modern_count": 1310,
+      "classic_count": 166,
+      "modern_share": 8.22,
+      "classic_share": 4.43,
+      "rise_ratio": 1.838
+    }
+  ],
+  "top_declining_genres": [
+    {
+      "genre": "Western",
+      "modern_count": 24,
+      "classic_count": 43,
+      "modern_share": 0.15,
+      "classic_share": 1.15,
+      "rise_ratio": 0.201
+    },
+    {
+      "genre": "Kids",
+      "modern_count": 149,
+      "classic_count": 147,
+      "modern_share": 0.93,
+      "classic_share": 3.92,
+      "rise_ratio": 0.257
+    },
+    {
+      "genre": "Family",
+      "modern_count": 350,
+      "classic_count": 252,
+      "modern_share": 2.2,
+      "classic_share": 6.72,
+      "rise_ratio": 0.337
+    },
+    {
+      "genre": "Soap",
+      "modern_count": 132,
+      "classic_count": 59,
+      "modern_share": 0.83,
+      "classic_share": 1.57,
+      "rise_ratio": 0.555
+    },
+    {
+      "genre": "Action & Adventure",
+      "modern_count": 874,
+      "classic_count": 337,
+      "modern_share": 5.48,
+      "classic_share": 8.99,
+      "rise_ratio": 0.614
+    },
+    {
+      "genre": "Adventure",
+      "modern_count": 340,
+      "classic_count": 120,
+      "modern_share": 2.13,
+      "classic_share": 3.2,
+      "rise_ratio": 0.677
+    },
+    {
+      "genre": "Talk",
+      "modern_count": 65,
+      "classic_count": 24,
+      "modern_share": 0.41,
+      "classic_share": 0.64,
+      "rise_ratio": 0.686
+    },
+    {
+      "genre": "Animation",
+      "modern_count": 1559,
+      "classic_count": 528,
+      "modern_share": 9.78,
+      "classic_share": 14.08,
+      "rise_ratio": 0.697
+    }
+  ],
+  "diversity_per_decade": {
+    "1940s": {
+      "shannon_entropy": 1.922,
+      "unique_genres": 4,
+      "total_shows": 3
+    },
+    "1950s": {
+      "shannon_entropy": 3.538,
+      "unique_genres": 18,
+      "total_shows": 46
+    },
+    "1960s": {
+      "shannon_entropy": 3.649,
+      "unique_genres": 23,
+      "total_shows": 151
+    },
+    "1970s": {
+      "shannon_entropy": 3.669,
+      "unique_genres": 28,
+      "total_shows": 269
+    },
+    "1980s": {
+      "shannon_entropy": 3.669,
+      "unique_genres": 25,
+      "total_shows": 462
+    },
+    "1990s": {
+      "shannon_entropy": 3.706,
+      "unique_genres": 30,
+      "total_shows": 782
+    },
+    "2000s": {
+      "shannon_entropy": 3.738,
+      "unique_genres": 33,
+      "total_shows": 1692
+    },
+    "2010s": {
+      "shannon_entropy": 3.679,
+      "unique_genres": 33,
+      "total_shows": 4801
+    },
+    "2020s": {
+      "shannon_entropy": 3.692,
+      "unique_genres": 33,
+      "total_shows": 2779
+    }
+  },
+  "headline": {
+    "best_decade": "1970s",
+    "worst_decade": "1940s",
+    "rating_delta": 0.53,
+    "top_rising_genre": "Thriller",
+    "top_declining_genre": "Western"
+  }
+}

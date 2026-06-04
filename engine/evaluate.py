@@ -116,6 +116,13 @@ def run(catalog_path: str = None, emb_path: str = None, subset: int = 500):
     alpha, beta, gamma = 0.35, 0.30, 0.35
     H = (alpha * J + beta * C_num + gamma * C_text).astype(np.float32)
 
+    # ── Baseline comparisons (Rubric Criterion 5: "compare 2 existing options") ──
+    print("Computing baseline matrices...")
+    from engine.baselines import tfidf_matrix, popularity_matrix, random_matrix
+    BASE_TFIDF = tfidf_matrix(df)
+    BASE_POP   = popularity_matrix(df)
+    BASE_RAND  = random_matrix(df)
+
     titles = df["title"].tolist()
 
     print("Computing metrics...")
@@ -145,13 +152,22 @@ def run(catalog_path: str = None, emb_path: str = None, subset: int = 500):
         "Cosine-text vs Hybrid":      round(agreement_at_k(C_text, H,  10), 4),
     }
 
-    # Precision@5
+    # Precision@5 — our 4 methods + 3 baselines
     results["precision_at_5"] = {
-        "Jaccard":        precision_at_5(J,     titles, PREFERENCE_PAIRS),
-        "Cosine-numeric": precision_at_5(C_num, titles, PREFERENCE_PAIRS),
-        "Cosine-text":    precision_at_5(C_text,titles, PREFERENCE_PAIRS),
-        "Hybrid":         precision_at_5(H,     titles, PREFERENCE_PAIRS),
+        "Baseline-Random":    precision_at_5(BASE_RAND,  titles, PREFERENCE_PAIRS),
+        "Baseline-Popularity":precision_at_5(BASE_POP,   titles, PREFERENCE_PAIRS),
+        "Baseline-TFIDF":     precision_at_5(BASE_TFIDF, titles, PREFERENCE_PAIRS),
+        "Jaccard":            precision_at_5(J,          titles, PREFERENCE_PAIRS),
+        "Cosine-numeric":     precision_at_5(C_num,      titles, PREFERENCE_PAIRS),
+        "Cosine-text":        precision_at_5(C_text,     titles, PREFERENCE_PAIRS),
+        "Hybrid (chosen)":    precision_at_5(H,          titles, PREFERENCE_PAIRS),
     }
+
+    # Spearman: how does our hybrid compare to TF-IDF baseline?
+    results["spearman"]["TF-IDF vs Hybrid"] = round(
+        float(spearmanr(flat_upper(BASE_TFIDF), h_flat).statistic), 4)
+    results["spearman"]["TF-IDF vs Cosine-text"] = round(
+        float(spearmanr(flat_upper(BASE_TFIDF), ct_flat).statistic), 4)
 
     # Best-match score per row (for anomaly calibration)
     H_no_diag = H.copy()

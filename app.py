@@ -1,5 +1,5 @@
 """
-CineMatch AI — Streamlit Application
+CineMatch AI — Streamlit Application (polished UI)
 Bilingual (Hebrew/English) TV & Movie recommendation agent.
 """
 
@@ -19,97 +19,400 @@ CATALOG_PATH = BASE / "data" / "catalog.parquet"
 EMB_PATH     = BASE / "data" / "embeddings.npy"
 LOG_PATH     = BASE / "data" / "cleaning_log.json"
 EVAL_PATH    = BASE / "data" / "evaluation_results.json"
+TRENDS_PATH  = BASE / "data" / "trends.json"
 
 from i18n import t
 import agent.llm as llm_agent
 
-# ── Page config ────────────────────────────────────────────────────────────────
+# ── Brand palette ──────────────────────────────────────────────────────────────
+BRAND = {
+    "bg":            "#0a0e1a",
+    "bg_card":       "#141826",
+    "bg_card_alt":   "#1a1f2e",
+    "border":        "#252b3d",
+    "border_hover":  "#3a4262",
+    "text":          "#e8eaed",
+    "text_muted":    "#8b93a8",
+    "accent":        "#4fc3f7",   # cyan
+    "accent_2":      "#7c4dff",   # purple
+    "accent_warm":   "#ff6b9d",   # pink
+    "success":       "#4ade80",
+    "warning":       "#fbbf24",
+    "gradient_1":    "linear-gradient(135deg, #4fc3f7 0%, #7c4dff 100%)",
+    "gradient_2":    "linear-gradient(135deg, #ff6b9d 0%, #7c4dff 100%)",
+}
+
 st.set_page_config(
     page_title="CineMatch AI",
     page_icon="🎬",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
-# ── Load resources ─────────────────────────────────────────────────────────────
+# ── Cached resources ───────────────────────────────────────────────────────────
 
-@st.cache_resource(show_spinner="Loading catalog...")
+@st.cache_resource(show_spinner=False)
 def load_catalog():
-    df = pd.read_parquet(CATALOG_PATH)
-    return df
+    return pd.read_parquet(CATALOG_PATH)
 
-@st.cache_resource(show_spinner="Loading embeddings...")
+@st.cache_resource(show_spinner=False)
 def load_embeddings():
     return np.load(str(EMB_PATH))
 
-@st.cache_resource(show_spinner="Building similarity matrices...")
+@st.cache_resource(show_spinner=False)
 def load_matrices(catalog):
     from engine.cosine import build_numeric_matrix
     from engine.anomaly import calibrate
-    from engine.jaccard import batch_jaccard_matrix
-    from sklearn.metrics.pairwise import cosine_similarity as sk_cos
-
     num_mat = build_numeric_matrix(catalog)
-    # anomaly calibration using numeric matrix best scores
     H_no_diag = num_mat.copy()
     np.fill_diagonal(H_no_diag, -1)
     best_scores = H_no_diag.max(axis=1)
     threshold = calibrate(best_scores, percentile=5)
     return num_mat, threshold
 
-@st.cache_resource(show_spinner="Loading sentence encoder...")
+@st.cache_resource(show_spinner=False)
 def load_encoder():
     from sentence_transformers import SentenceTransformer
     return SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
 
-def load_cleaning_log():
-    if LOG_PATH.exists():
-        with open(LOG_PATH) as f:
-            return json.load(f)
-    return {}
+def _json(p):
+    return json.load(open(p)) if Path(p).exists() else {}
 
-def load_eval_results():
-    if EVAL_PATH.exists():
-        with open(EVAL_PATH) as f:
-            return json.load(f)
-    return {}
-
-# ── RTL / LTR CSS injection ────────────────────────────────────────────────────
+# ── Polished CSS ───────────────────────────────────────────────────────────────
 
 def inject_css(lang: str):
     direction = "rtl" if lang == "he" else "ltr"
-    font = "Heebo, Arial, sans-serif" if lang == "he" else "Inter, sans-serif"
+    font_main   = "Heebo" if lang == "he" else "Inter"
+    font_stack  = f"'{font_main}', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif"
+    align_main  = "right" if lang == "he" else "left"
+
     st.markdown(f"""
-    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-    html, body, [class*="css"] {{
-        font-family: {font} !important;
+    /* ── Global ── */
+    html, body, [class*="css"], [class*="st"] {{
+        font-family: {font_stack} !important;
         direction: {direction} !important;
     }}
-    .stTextInput > div > div > input {{
-        direction: {direction};
-        font-family: {font};
+    .stApp {{
+        background:
+          radial-gradient(ellipse 80% 50% at 50% 0%, rgba(124,77,255,0.15), transparent),
+          radial-gradient(ellipse 60% 40% at 100% 20%, rgba(79,195,247,0.08), transparent),
+          {BRAND['bg']};
     }}
-    .result-card {{
-        background: #1a1a2e;
-        border-radius: 12px;
-        padding: 1.2rem;
+    .block-container {{
+        padding-top: 1.5rem;
+        padding-bottom: 4rem;
+        max-width: 1100px;
+    }}
+    .stTextInput > div > div > input,
+    .stTextArea textarea {{
+        background: {BRAND['bg_card']} !important;
+        border: 1px solid {BRAND['border']} !important;
+        border-radius: 14px !important;
+        color: {BRAND['text']} !important;
+        padding: 14px 18px !important;
+        font-size: 16px !important;
+        direction: {direction} !important;
+        text-align: {align_main} !important;
+        transition: all 0.2s ease !important;
+    }}
+    .stTextInput > div > div > input:focus {{
+        border-color: {BRAND['accent']} !important;
+        box-shadow: 0 0 0 3px rgba(79,195,247,0.15) !important;
+    }}
+    .stButton > button {{
+        background: {BRAND['gradient_1']} !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 12px !important;
+        padding: 10px 28px !important;
+        font-weight: 600 !important;
+        font-size: 15px !important;
+        transition: all 0.2s ease !important;
+        box-shadow: 0 4px 12px rgba(79,195,247,0.25) !important;
+    }}
+    .stButton > button:hover {{
+        transform: translateY(-1px) !important;
+        box-shadow: 0 6px 20px rgba(79,195,247,0.4) !important;
+    }}
+    /* Tabs */
+    .stTabs [data-baseweb="tab-list"] {{
+        background: {BRAND['bg_card']};
+        border-radius: 14px;
+        padding: 6px;
+        gap: 4px;
+        border: 1px solid {BRAND['border']};
+    }}
+    .stTabs [data-baseweb="tab"] {{
+        background: transparent !important;
+        color: {BRAND['text_muted']} !important;
+        border-radius: 10px !important;
+        font-weight: 500 !important;
+        padding: 8px 18px !important;
+        transition: all 0.2s ease !important;
+    }}
+    .stTabs [aria-selected="true"] {{
+        background: {BRAND['bg_card_alt']} !important;
+        color: {BRAND['text']} !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+    }}
+    /* Hero */
+    .cm-hero {{
+        text-align: center;
+        padding: 2rem 0 1.5rem;
+    }}
+    .cm-hero-title {{
+        font-size: 3.5rem;
+        font-weight: 800;
+        background: {BRAND['gradient_1']};
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin: 0;
+        letter-spacing: -1px;
+        line-height: 1.1;
+    }}
+    .cm-hero-sub {{
+        color: {BRAND['text_muted']};
+        font-size: 1.1rem;
+        margin-top: 0.5rem;
+        font-weight: 400;
+    }}
+    .cm-badge-row {{
+        display: flex;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        flex-wrap: wrap;
+    }}
+    .cm-badge {{
+        background: {BRAND['bg_card']};
+        border: 1px solid {BRAND['border']};
+        color: {BRAND['text_muted']};
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }}
+    .cm-badge-accent {{
+        background: rgba(79,195,247,0.1);
+        border-color: rgba(79,195,247,0.3);
+        color: {BRAND['accent']};
+    }}
+    /* Result card */
+    .cm-result {{
+        background: linear-gradient(135deg, {BRAND['bg_card']} 0%, {BRAND['bg_card_alt']} 100%);
+        border: 1px solid {BRAND['border']};
+        border-radius: 18px;
+        padding: 1.5rem;
         margin-bottom: 1rem;
-        border-left: 4px solid #4fc3f7;
+        transition: all 0.25s ease;
+        position: relative;
+        overflow: hidden;
     }}
-    .score-bar {{
-        background: linear-gradient(90deg, #4fc3f7, #1565c0);
-        border-radius: 4px;
-        height: 6px;
+    .cm-result::before {{
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 3px;
+        background: {BRAND['gradient_1']};
+        opacity: 0;
+        transition: opacity 0.25s ease;
     }}
+    .cm-result:hover {{
+        border-color: {BRAND['border_hover']};
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }}
+    .cm-result:hover::before {{ opacity: 1; }}
+    .cm-rank {{
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px; height: 32px;
+        background: {BRAND['gradient_1']};
+        color: white;
+        border-radius: 10px;
+        font-weight: 700;
+        margin-{('left' if lang=='he' else 'right')}: 12px;
+    }}
+    .cm-title {{
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: {BRAND['text']};
+        margin-bottom: 0.25rem;
+    }}
+    .cm-meta {{
+        color: {BRAND['text_muted']};
+        font-size: 0.85rem;
+        margin-bottom: 0.75rem;
+    }}
+    .cm-score-bar-bg {{
+        background: rgba(255,255,255,0.06);
+        border-radius: 8px;
+        height: 8px;
+        overflow: hidden;
+        margin: 4px 0 12px;
+    }}
+    .cm-score-bar-fill {{
+        background: {BRAND['gradient_1']};
+        height: 100%;
+        border-radius: 8px;
+        transition: width 0.6s ease;
+    }}
+    .cm-score-label {{
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.78rem;
+        color: {BRAND['text_muted']};
+        margin-bottom: 2px;
+    }}
+    .cm-explanation {{
+        background: linear-gradient(135deg, rgba(79,195,247,0.08) 0%, rgba(124,77,255,0.08) 100%);
+        border: 1px solid rgba(79,195,247,0.2);
+        border-radius: 16px;
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 1.5rem;
+        color: {BRAND['text']};
+        font-size: 0.96rem;
+        line-height: 1.6;
+    }}
+    .cm-anomaly {{
+        background: linear-gradient(135deg, rgba(251,191,36,0.12) 0%, rgba(251,113,133,0.12) 100%);
+        border: 1px solid rgba(251,191,36,0.3);
+        border-radius: 14px;
+        padding: 1rem 1.25rem;
+        color: {BRAND['warning']};
+        font-weight: 500;
+        margin-bottom: 1rem;
+    }}
+    /* Example chips */
+    .cm-chips {{
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin: 0.75rem 0 1.5rem;
+        justify-content: center;
+    }}
+    .cm-chip {{
+        background: {BRAND['bg_card']};
+        border: 1px solid {BRAND['border']};
+        color: {BRAND['text_muted']};
+        padding: 6px 14px;
+        border-radius: 100px;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }}
+    .cm-chip:hover {{
+        border-color: {BRAND['accent']};
+        color: {BRAND['accent']};
+    }}
+    /* Stat tile */
+    .cm-stat {{
+        background: {BRAND['bg_card']};
+        border: 1px solid {BRAND['border']};
+        border-radius: 14px;
+        padding: 1rem 1.25rem;
+        text-align: center;
+    }}
+    .cm-stat-value {{
+        font-size: 1.8rem;
+        font-weight: 700;
+        background: {BRAND['gradient_1']};
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }}
+    .cm-stat-label {{
+        color: {BRAND['text_muted']};
+        font-size: 0.8rem;
+        margin-top: 0.25rem;
+    }}
+    /* Streamlit metric override */
+    [data-testid="stMetric"] {{
+        background: {BRAND['bg_card']};
+        padding: 12px 16px;
+        border-radius: 12px;
+        border: 1px solid {BRAND['border']};
+    }}
+    [data-testid="stMetricLabel"] {{ color: {BRAND['text_muted']} !important; }}
+    [data-testid="stMetricValue"] {{ color: {BRAND['text']} !important; }}
+    /* Section heading */
+    .cm-section-h {{
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: {BRAND['text']};
+        margin: 1.5rem 0 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }}
+    /* Plotly bg */
+    .js-plotly-plot, .plot-container {{
+        background: transparent !important;
+    }}
+    /* Hide default header */
+    header[data-testid="stHeader"] {{ background: transparent; }}
+    #MainMenu, footer {{ visibility: hidden; }}
     </style>
     """, unsafe_allow_html=True)
 
 
-# ── Search logic ───────────────────────────────────────────────────────────────
+# ── Hero & Search ──────────────────────────────────────────────────────────────
 
-def run_search(query: str, catalog: pd.DataFrame, embeddings: np.ndarray,
-               numeric_matrix: np.ndarray, encoder, threshold: float, lang: str):
+def render_hero(lang: str, llm_on: bool):
+    st.markdown(f"""
+    <div class="cm-hero">
+      <div class="cm-hero-title">🎬 CineMatch AI</div>
+      <div class="cm-hero-sub">{t('app_subtitle', lang)}</div>
+      <div class="cm-badge-row">
+        <span class="cm-badge cm-badge-accent">{'Claude API ✓' if llm_on else 'Offline mode'}</span>
+        <span class="cm-badge">11,013 shows</span>
+        <span class="cm-badge">4 sources</span>
+        <span class="cm-badge">Hybrid AI</span>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+EXAMPLE_QUERIES = {
+    "en": [
+        "Like Breaking Bad but shorter",
+        "Funny office comedy",
+        "Dark sci-fi thriller",
+        "Something like Game of Thrones",
+    ],
+    "he": [
+        "כמו Breaking Bad אבל קצר יותר",
+        "קומדיה משרדית מצחיקה",
+        "מותחן סייפיי אפל",
+        "משהו כמו Game of Thrones",
+    ],
+}
+
+
+def render_example_chips(lang: str):
+    chips_html = '<div class="cm-chips">'
+    for i, q in enumerate(EXAMPLE_QUERIES.get(lang, EXAMPLE_QUERIES["en"])):
+        chips_html += f'<span class="cm-chip">💡 {q}</span>'
+    chips_html += '</div>'
+    st.markdown(chips_html, unsafe_allow_html=True)
+
+    # interactive chips via columns
+    cols = st.columns(len(EXAMPLE_QUERIES[lang]))
+    picked = None
+    for i, q in enumerate(EXAMPLE_QUERIES[lang]):
+        with cols[i]:
+            if st.button(q, key=f"chip_{i}", use_container_width=True):
+                picked = q
+    return picked
+
+
+# ── Search execution ──────────────────────────────────────────────────────────
+
+def run_search(query: str, catalog, embeddings, numeric_matrix, encoder, threshold, lang):
     from agent.llm import parse_intent, explain_recommendations
     from engine.hybrid import recommend
     from engine.anomaly import is_anomalous
@@ -118,44 +421,30 @@ def run_search(query: str, catalog: pd.DataFrame, embeddings: np.ndarray,
     detected_lang = intent.get("lang", lang)
     seeds = intent.get("seeds", [])
 
-    # If no seeds detected from LLM, try keyword match in catalog
     if not seeds:
-        # look for show titles mentioned verbatim in query
         for title in catalog["title"].tolist():
-            if title.lower() in query.lower() and len(title) > 3:
+            if title and len(title) > 3 and title.lower() in query.lower():
                 seeds.append(title)
                 break
 
-    # Embed the full query text for text-cosine
-    query_emb = encoder.encode(
-        [query], convert_to_numpy=True, normalize_embeddings=True)[0]
+    query_emb = encoder.encode([query], convert_to_numpy=True, normalize_embeddings=True)[0]
 
     if seeds:
-        # recommend using the first seed title
         results_df = recommend(
-            query_title=seeds[0],
-            catalog=catalog,
-            numeric_matrix=numeric_matrix,
-            embeddings=embeddings,
-            query_embedding=query_emb,
-            top_n=5,
+            query_title=seeds[0], catalog=catalog,
+            numeric_matrix=numeric_matrix, embeddings=embeddings,
+            query_embedding=query_emb, top_n=5,
             exclude_titles=set(seeds),
+            query_lang=detected_lang,
         )
     else:
-        # no seed → pure text-cosine search
         from engine.cosine import top_k_cosine_text
-        results_df = top_k_cosine_text(
-            query_embedding=query_emb,
-            catalog=catalog,
-            embeddings=embeddings,
-            k=5,
-        )
+        results_df = top_k_cosine_text(query_emb, catalog, embeddings, k=5)
         if not results_df.empty:
             results_df["jaccard_score"] = 0.0
             results_df["cosine_numeric_score"] = 0.0
             results_df["hybrid_score"] = results_df.get("cosine_text_score", 0.0)
 
-    # Anomaly check
     anomalous = False
     if not results_df.empty:
         best_score = float(results_df["hybrid_score"].iloc[0]) if "hybrid_score" in results_df else 0.0
@@ -163,244 +452,353 @@ def run_search(query: str, catalog: pd.DataFrame, embeddings: np.ndarray,
 
     recs = results_df.to_dict("records") if not results_df.empty else []
     explanation = explain_recommendations(intent, recs, lang=detected_lang)
-
     return recs, explanation, anomalous, detected_lang
 
 
-# ── UI Components ──────────────────────────────────────────────────────────────
+# ── Result rendering ──────────────────────────────────────────────────────────
 
-def render_result_card(rec: dict, rank: int, lang: str):
+def render_result(rec: dict, rank: int, lang: str):
     poster = rec.get("poster_path", "")
-    poster_url = f"https://image.tmdb.org/t/p/w92{poster}" if poster.startswith("/") else ""
+    poster_url = f"https://image.tmdb.org/t/p/w154{poster}" if poster.startswith("/") else ""
 
-    with st.container():
-        col_img, col_info = st.columns([1, 5])
-        with col_img:
-            if poster_url:
-                st.image(poster_url, width=60)
-            else:
-                st.markdown("🎬")
-        with col_info:
-            st.markdown(f"### {rank}. {rec.get('title','')}")
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric(t("rating", lang), f"⭐ {rec.get('rating','N/A')}")
-            with col2:
-                st.metric(t("decade", lang), rec.get("decade_str",""))
-            with col3:
-                hybrid = rec.get("hybrid_score", rec.get("cosine_text_score", 0))
-                st.metric(t("score", lang), f"{hybrid:.2%}")
+    hybrid = float(rec.get("hybrid_score", rec.get("cosine_text_score", 0)) or 0)
+    j  = float(rec.get("jaccard_score", 0) or 0)
+    n  = float(rec.get("cosine_numeric_score", 0) or 0)
+    tx = float(rec.get("cosine_text_score", 0) or 0)
 
-            st.caption(f"**{t('genres', lang)}:** {rec.get('genres','')}")
+    rating = rec.get("rating", "N/A")
+    rating_str = f"{rating:.1f}" if isinstance(rating, (int, float)) else str(rating)
+    decade = rec.get("decade_str", "")
+    genres = rec.get("genres", "")
+    ov = rec.get("overview", "") or ""
 
-            # Score breakdown
-            j = rec.get("jaccard_score", 0)
-            n = rec.get("cosine_numeric_score", 0)
-            tx = rec.get("cosine_text_score", 0)
-            if j or n or tx:
-                st.caption(
-                    f"{t('jaccard',lang)}: {j:.2%} · "
-                    f"{t('num_cosine',lang)}: {n:.2%} · "
-                    f"{t('text_cosine',lang)}: {tx:.2%}"
-                )
+    st.markdown('<div class="cm-result">', unsafe_allow_html=True)
+    c_img, c_main = st.columns([1, 5])
+    with c_img:
+        if poster_url:
+            st.image(poster_url, use_container_width=True)
+        else:
+            st.markdown(
+                f"<div style='width:100%;aspect-ratio:2/3;background:{BRAND['bg_card_alt']};"
+                f"border-radius:10px;display:flex;align-items:center;justify-content:center;"
+                f"font-size:2.5rem;color:{BRAND['text_muted']};'>🎬</div>",
+                unsafe_allow_html=True
+            )
+    with c_main:
+        st.markdown(
+            f'<div style="display:flex;align-items:center;">'
+            f'<span class="cm-rank">{rank}</span>'
+            f'<div><div class="cm-title">{rec.get("title","")}</div>'
+            f'<div class="cm-meta">⭐ {rating_str} · {decade} · {genres}</div></div>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
 
-            ov = rec.get("overview","")
-            if ov and len(ov) > 20:
-                with st.expander("📖 Plot synopsis"):
-                    st.write(ov[:400] + ("..." if len(ov) > 400 else ""))
-        st.divider()
+        # Hybrid score gauge
+        st.markdown(
+            f'<div class="cm-score-label">'
+            f'<span><strong>{t("score", lang)}</strong></span>'
+            f'<span style="color:{BRAND["accent"]};font-weight:700;">{hybrid:.0%}</span>'
+            f'</div>'
+            f'<div class="cm-score-bar-bg"><div class="cm-score-bar-fill" style="width:{hybrid*100:.0f}%;"></div></div>',
+            unsafe_allow_html=True
+        )
+
+        # Three sub-scores
+        sc1, sc2, sc3 = st.columns(3)
+        for col, name, val, color in [
+            (sc1, t("jaccard", lang),    j,  BRAND["accent"]),
+            (sc2, t("num_cosine", lang), n,  BRAND["accent_2"]),
+            (sc3, t("text_cosine", lang),tx, BRAND["accent_warm"]),
+        ]:
+            col.markdown(
+                f'<div class="cm-score-label">'
+                f'<span style="font-size:0.75rem;">{name}</span>'
+                f'<span style="font-size:0.75rem;color:{color};font-weight:600;">{val:.0%}</span>'
+                f'</div>'
+                f'<div class="cm-score-bar-bg"><div class="cm-score-bar-fill" style="width:{max(0,val)*100:.0f}%;background:{color};"></div></div>',
+                unsafe_allow_html=True
+            )
+
+        if ov and len(ov) > 20:
+            with st.expander("📖 " + ("עלילה" if lang == "he" else "Plot")):
+                st.write(ov[:500] + ("..." if len(ov) > 500 else ""))
+
+    st.markdown('</div>', unsafe_allow_html=True)
 
 
-def render_research_tab(catalog: pd.DataFrame, log: dict, eval_res: dict, lang: str):
-    st.subheader(t("research_title", lang))
+# ── Research tab ──────────────────────────────────────────────────────────────
+
+def render_research_tab(catalog, log, eval_res, trends, lang):
+    st.markdown(f'<div class="cm-section-h">📊 {t("research_title", lang)}</div>', unsafe_allow_html=True)
     st.caption(t("research_subtitle", lang, n=len(catalog)))
 
-    # ── Average rating by decade
-    df_dec = (catalog
-              .dropna(subset=["decade","rating"])
-              .groupby("decade_str")["rating"]
-              .agg(["mean","count"])
-              .reset_index()
-              .rename(columns={"mean":"avg_rating","count":"n_shows"}))
-    df_dec = df_dec[df_dec["n_shows"] >= 5].sort_values("decade_str")
+    # ── Headline KPIs
+    headline = trends.get("headline", {}) if trends else {}
+    if headline:
+        k1, k2, k3, k4 = st.columns(4)
+        with k1: st.markdown(f'<div class="cm-stat"><div class="cm-stat-value">{headline.get("best_decade","-")}</div><div class="cm-stat-label">Best Decade (avg rating)</div></div>', unsafe_allow_html=True)
+        with k2: st.markdown(f'<div class="cm-stat"><div class="cm-stat-value">{headline.get("top_rising_genre","-")}</div><div class="cm-stat-label">Top Rising Genre 🔥</div></div>', unsafe_allow_html=True)
+        with k3: st.markdown(f'<div class="cm-stat"><div class="cm-stat-value">{headline.get("top_declining_genre","-")}</div><div class="cm-stat-label">Top Declining Genre ❄️</div></div>', unsafe_allow_html=True)
+        with k4: st.markdown(f'<div class="cm-stat"><div class="cm-stat-value">{headline.get("rating_delta","-")}</div><div class="cm-stat-label">Best vs Worst (rating Δ)</div></div>', unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
 
-    fig1 = px.bar(df_dec, x="decade_str", y="avg_rating",
-                  text="n_shows",
-                  labels={"decade_str":"Decade","avg_rating":"Avg Rating","n_shows":"# Shows"},
-                  color="avg_rating",
-                  color_continuous_scale="Blues",
-                  title=t("avg_rating_decade", lang))
-    fig1.update_traces(texttemplate="%{text} shows", textposition="outside")
-    fig1.update_layout(coloraxis_showscale=False)
-    st.plotly_chart(fig1, use_container_width=True)
+    # ── Decade rating trend
+    if trends and "decade_stats" in trends:
+        ds = pd.DataFrame(trends["decade_stats"])
+        ds = ds.sort_values("decade_str")
+        fig = px.line(ds, x="decade_str", y="avg_rating",
+                      markers=True, title=t("avg_rating_decade", lang))
+        fig.update_traces(line=dict(color=BRAND["accent"], width=3),
+                          marker=dict(size=10, color=BRAND["accent_2"]))
+        fig.update_layout(
+            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            font=dict(color=BRAND["text"]),
+            xaxis=dict(gridcolor="rgba(255,255,255,0.05)"),
+            yaxis=dict(gridcolor="rgba(255,255,255,0.05)"),
+            margin=dict(t=50, b=30, l=30, r=30),
+        )
+        st.plotly_chart(fig, use_container_width=True)
 
-    # ── Top genres overall
-    genre_counts: dict = {}
-    for g_str in catalog["genres"].dropna():
-        for g in g_str.split(","):
-            g = g.strip()
-            if g:
-                genre_counts[g] = genre_counts.get(g, 0) + 1
-    top_genres = sorted(genre_counts.items(), key=lambda x: -x[1])[:15]
-    df_genres = pd.DataFrame(top_genres, columns=["Genre","Count"])
-    fig2 = px.bar(df_genres, x="Count", y="Genre", orientation="h",
-                  color="Count", color_continuous_scale="Teal",
-                  title=t("top_genres_decade", lang))
-    fig2.update_layout(yaxis={"categoryorder":"total ascending"}, coloraxis_showscale=False)
-    st.plotly_chart(fig2, use_container_width=True)
+    # ── Rising vs declining genres
+    if trends and "top_rising_genres" in trends:
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown('<div class="cm-section-h">🔥 Rising Genres</div>', unsafe_allow_html=True)
+            rising = trends["top_rising_genres"][:6]
+            if rising:
+                df_r = pd.DataFrame([{"Genre": g["genre"], "Rise Ratio": g["rise_ratio"]} for g in rising])
+                fig_r = px.bar(df_r, x="Rise Ratio", y="Genre", orientation="h",
+                               color="Rise Ratio", color_continuous_scale=["#4fc3f7","#7c4dff","#ff6b9d"])
+                fig_r.update_layout(
+                    plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                    font=dict(color=BRAND["text"]),
+                    yaxis=dict(categoryorder="total ascending", gridcolor="rgba(255,255,255,0.05)"),
+                    xaxis=dict(gridcolor="rgba(255,255,255,0.05)"),
+                    coloraxis_showscale=False, margin=dict(t=20, b=30, l=10, r=10),
+                )
+                st.plotly_chart(fig_r, use_container_width=True)
+        with col2:
+            st.markdown('<div class="cm-section-h">❄️ Declining Genres</div>', unsafe_allow_html=True)
+            declining = trends["top_declining_genres"][:6]
+            if declining:
+                df_d = pd.DataFrame([{"Genre": g["genre"], "Rise Ratio": g["rise_ratio"]} for g in declining])
+                fig_d = px.bar(df_d, x="Rise Ratio", y="Genre", orientation="h",
+                               color="Rise Ratio", color_continuous_scale=["#fbbf24","#8b93a8"])
+                fig_d.update_layout(
+                    plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                    font=dict(color=BRAND["text"]),
+                    yaxis=dict(categoryorder="total descending", gridcolor="rgba(255,255,255,0.05)"),
+                    xaxis=dict(gridcolor="rgba(255,255,255,0.05)"),
+                    coloraxis_showscale=False, margin=dict(t=20, b=30, l=10, r=10),
+                )
+                st.plotly_chart(fig_d, use_container_width=True)
 
-    # ── Cleaning log
+    # ── Genre diversity over time
+    if trends and "diversity_per_decade" in trends:
+        dpd = trends["diversity_per_decade"]
+        df_div = pd.DataFrame([
+            {"Decade": d, "Shannon Entropy": v["shannon_entropy"], "Unique Genres": v["unique_genres"]}
+            for d, v in dpd.items() if d != "Unknown"
+        ]).sort_values("Decade")
+        fig_div = px.area(df_div, x="Decade", y="Shannon Entropy",
+                          title="Genre Diversity Over Decades (Shannon Entropy)")
+        fig_div.update_traces(line=dict(color=BRAND["accent_warm"], width=2),
+                              fillcolor="rgba(255,107,157,0.2)")
+        fig_div.update_layout(
+            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            font=dict(color=BRAND["text"]),
+            xaxis=dict(gridcolor="rgba(255,255,255,0.05)"),
+            yaxis=dict(gridcolor="rgba(255,255,255,0.05)"),
+            margin=dict(t=50, b=30, l=30, r=30),
+        )
+        st.plotly_chart(fig_div, use_container_width=True)
+
+    # ── Data sources
     if log:
-        st.subheader(t("data_sources", lang))
+        st.markdown(f'<div class="cm-section-h">📂 {t("data_sources", lang)}</div>', unsafe_allow_html=True)
         source_names = {
             "tmdb_tvs":    "TMDb TV Shows",
             "disney_plus": "Disney+ (OMDb enriched)",
             "imdb_all":    "IMDb Top-10k Scrape",
             "imdb_top5000":"IMDb Top-5000 TV Series",
         }
-        for src, info in log.get("sources", {}).items():
-            pct = round(info["clean"] / info["raw"] * 100, 1) if info["raw"] else 0
-            st.write(t("source_row", lang,
-                       name=source_names.get(src, src),
-                       raw=info["raw"], clean=info["clean"], pct=pct))
-        st.write(f"**Total raw:** {log.get('total_raw',0):,} rows  →  "
-                 f"**After dedupe:** {log.get('total_clean',0):,} unique titles "
-                 f"({log.get('drop_rate_overall',0)}% reduction)")
+        cols = st.columns(4)
+        for i, (src, info) in enumerate(log.get("sources", {}).items()):
+            with cols[i % 4]:
+                pct = round(info["clean"] / info["raw"] * 100, 1) if info["raw"] else 0
+                st.markdown(
+                    f'<div class="cm-stat">'
+                    f'<div class="cm-stat-value">{info["clean"]:,}</div>'
+                    f'<div class="cm-stat-label">{source_names.get(src, src)}<br>'
+                    f'<span style="font-size:0.7rem;opacity:0.6;">from {info["raw"]:,} raw ({pct}%)</span></div>'
+                    f'</div>', unsafe_allow_html=True
+                )
+        st.markdown(
+            f'<div style="text-align:center;margin-top:1rem;color:{BRAND["text_muted"]};">'
+            f'Total: <strong>{log.get("total_raw",0):,}</strong> raw rows → '
+            f'<strong>{log.get("total_clean",0):,}</strong> unique titles '
+            f'(<strong>{log.get("drop_rate_overall",0)}%</strong> reduction)'
+            f'</div>', unsafe_allow_html=True
+        )
 
-    # ── Evaluation results
+    # ── Algorithm comparison
     if eval_res:
-        st.subheader("Algorithm Comparison")
-        spearman = eval_res.get("spearman", {})
+        st.markdown('<div class="cm-section-h">🔬 Algorithm Comparison (incl. baselines)</div>', unsafe_allow_html=True)
         prec = eval_res.get("precision_at_5", {})
-        agr  = eval_res.get("agreement_at_10", {})
+        if prec:
+            order = ["Baseline-Random","Baseline-Popularity","Baseline-TFIDF",
+                     "Jaccard","Cosine-numeric","Cosine-text","Hybrid (chosen)"]
+            order = [k for k in order if k in prec]
+            df_pr = pd.DataFrame({"Method": order, "Precision@5": [prec[k] for k in order]})
+            fig_pr = px.bar(df_pr, x="Method", y="Precision@5",
+                            color="Precision@5", color_continuous_scale=["#3a4262","#4fc3f7","#7c4dff"],
+                            title="Precision@5 — Our Methods vs Existing Baselines")
+            fig_pr.update_layout(
+                plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                font=dict(color=BRAND["text"]),
+                xaxis=dict(gridcolor="rgba(255,255,255,0.05)"),
+                yaxis=dict(gridcolor="rgba(255,255,255,0.05)", tickformat=".0%"),
+                coloraxis_showscale=False,
+                margin=dict(t=50, b=80, l=30, r=30),
+            )
+            st.plotly_chart(fig_pr, use_container_width=True)
+            st.caption(f"Anomaly threshold (5th percentile): **{eval_res.get('anomaly_threshold_5pct','')}**")
 
-        st.write("**Spearman rank correlation between methods:**")
-        sp_df = pd.DataFrame(list(spearman.items()), columns=["Method Pair","Spearman ρ"])
-        st.dataframe(sp_df, use_container_width=True, hide_index=True)
 
-        col1, col2 = st.columns(2)
-        with col1:
-            st.write("**Precision@5 on preference set:**")
-            pr_df = pd.DataFrame(list(prec.items()), columns=["Method","Precision@5"])
-            st.dataframe(pr_df, use_container_width=True, hide_index=True)
-        with col2:
-            st.write("**Agreement@10 between methods:**")
-            ag_df = pd.DataFrame(list(agr.items()), columns=["Method Pair","Agreement@10"])
-            st.dataframe(ag_df, use_container_width=True, hide_index=True)
+# ── About tab ─────────────────────────────────────────────────────────────────
 
-        st.info(f"Anomaly threshold (5th percentile of best-match scores): "
-                f"**{eval_res.get('anomaly_threshold_5pct','')}**")
-
-
-def render_about_tab(catalog: pd.DataFrame, lang: str):
-    st.subheader(t("about_title", lang))
+def render_about_tab(catalog, lang):
+    st.markdown(f'<div class="cm-section-h">ℹ️ {t("about_title", lang)}</div>', unsafe_allow_html=True)
     st.markdown(t("about_text", lang, n=len(catalog)))
 
+    st.markdown('<div class="cm-section-h">🧠 Architecture</div>', unsafe_allow_html=True)
+    st.markdown(f"""
+    <div style="background:{BRAND['bg_card']};border:1px solid {BRAND['border']};
+                border-radius:14px;padding:1.5rem;font-family:'SF Mono','Consolas',monospace;
+                font-size:0.85rem;line-height:1.8;color:{BRAND['text']};">
+      <div>📝 <strong>User Query</strong> (Hebrew or English, free text)</div>
+      <div style="margin-left:1em;color:{BRAND['text_muted']};">↓</div>
+      <div>🤖 <strong>Claude claude-sonnet-4-6</strong> — intent parser (prompt-cached)</div>
+      <div style="margin-left:1em;color:{BRAND['text_muted']};">↓ {{seeds, mood, lang}}</div>
+      <div>🔍 <strong>Three parallel similarity engines:</strong></div>
+      <div style="margin-left:2em;color:{BRAND['accent']};">• Jaccard — discrete genres ∪ decade ∪ language</div>
+      <div style="margin-left:2em;color:{BRAND['accent_2']};">• Cosine-numeric — rating, votes, year, popularity</div>
+      <div style="margin-left:2em;color:{BRAND['accent_warm']};">• Cosine-text — 384-dim multilingual embeddings</div>
+      <div style="margin-left:1em;color:{BRAND['text_muted']};">↓</div>
+      <div>⚖️ <strong>Hybrid scorer</strong> — α·J + β·C_num + γ·C_text</div>
+      <div style="margin-left:1em;color:{BRAND['text_muted']};">↓</div>
+      <div>🚨 <strong>Anomaly check</strong> — if best score &lt; 5th-percentile → graceful fallback</div>
+      <div style="margin-left:1em;color:{BRAND['text_muted']};">↓</div>
+      <div>💬 <strong>Claude claude-sonnet-4-6</strong> — bilingual explanation generator</div>
+      <div style="margin-left:1em;color:{BRAND['text_muted']};">↓</div>
+      <div>🎬 <strong>Top-5 recommendations</strong> + natural-language explanation</div>
+    </div>
+    """, unsafe_allow_html=True)
 
-# ── Main ────────────────────────────────────────────────────────────────────────
+
+# ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
-    # ── Session state
     if "lang" not in st.session_state:
         st.session_state.lang = "en"
     if "history" not in st.session_state:
         st.session_state.history = []
+    if "preset_query" not in st.session_state:
+        st.session_state.preset_query = ""
 
     lang = st.session_state.lang
     inject_css(lang)
 
-    # ── Sidebar
-    with st.sidebar:
-        st.title("🎬 CineMatch AI")
-        lang_choice = st.radio(
-            t("sidebar_lang", lang),
-            ["English", "עברית"],
+    # ── Top bar with language toggle
+    top_l, top_r = st.columns([5, 1])
+    with top_r:
+        lang_choice = st.selectbox(
+            "🌐", ["English", "עברית"],
             index=0 if lang == "en" else 1,
+            label_visibility="collapsed",
         )
         new_lang = "he" if lang_choice == "עברית" else "en"
         if new_lang != lang:
             st.session_state.lang = new_lang
             st.rerun()
 
-        st.divider()
-        client = llm_agent._get_client()
-        if client:
-            st.success(t("llm_status_on", lang))
-        else:
-            st.warning(t("llm_status_off", lang))
-            st.caption("Set ANTHROPIC_API_KEY in .env to enable Claude.")
-
-        st.caption(t("powered_by", lang))
-
-    # ── Load data
-    if not CATALOG_PATH.exists():
-        st.error("❌ catalog.parquet not found. Run `python data/load_catalog.py` first.")
-        st.stop()
-    if not EMB_PATH.exists():
-        st.error("❌ embeddings.npy not found. Run `python data/embed.py` first.")
+    # ── Resource check
+    if not CATALOG_PATH.exists() or not EMB_PATH.exists():
+        st.error("Data files missing. Run `python data/load_catalog.py` and `python data/embed.py` first.")
         st.stop()
 
     catalog   = load_catalog()
     embeddings = load_embeddings()
     numeric_matrix, threshold = load_matrices(catalog)
     encoder   = load_encoder()
-    log       = load_cleaning_log()
-    eval_res  = load_eval_results()
+    log       = _json(LOG_PATH)
+    eval_res  = _json(EVAL_PATH)
+    trends    = _json(TRENDS_PATH)
+    llm_on    = llm_agent._get_client() is not None
 
-    # ── Tabs
+    render_hero(lang, llm_on)
+
     tab1, tab2, tab3 = st.tabs([
         t("tab_chat", lang),
         t("tab_research", lang),
         t("tab_about", lang),
     ])
 
-    # ── Tab 1: Recommender
     with tab1:
-        st.title(t("app_title", lang))
-        st.subheader(t("app_subtitle", lang))
-
+        # Search input
+        default_q = st.session_state.preset_query
+        st.session_state.preset_query = ""
         query = st.text_input(
             t("query_label", lang),
+            value=default_q,
             placeholder=t("query_placeholder", lang),
             key="query_input",
+            label_visibility="visible",
         )
+        c1, c2 = st.columns([1, 5])
+        with c1:
+            search_clicked = st.button(t("search_btn", lang), type="primary", use_container_width=True)
 
-        search_clicked = st.button(t("search_btn", lang), type="primary")
+        # Example chips
+        if not query and not search_clicked:
+            st.caption(("💡 דוגמאות:" if lang == "he" else "💡 Try one of these:"))
+            picked = render_example_chips(lang)
+            if picked:
+                st.session_state.preset_query = picked
+                st.rerun()
 
         if search_clicked and query.strip():
-            with st.spinner(t("searching", lang)):
+            with st.spinner("🤖 " + ("קלוד חושב..." if lang == "he" else "Claude is thinking...")):
                 recs, explanation, anomalous, detected_lang = run_search(
                     query, catalog, embeddings, numeric_matrix, encoder, threshold, lang)
 
             if anomalous:
-                st.warning(t("anomaly_warning", lang))
+                st.markdown(f'<div class="cm-anomaly">⚠️ {t("anomaly_warning", lang)}</div>',
+                            unsafe_allow_html=True)
 
             if not recs:
                 st.info(t("no_results", lang))
             else:
-                st.subheader(t("results_title", lang))
-                st.markdown(explanation)
-                st.divider()
+                st.markdown(f'<div class="cm-explanation">💬 {explanation}</div>',
+                            unsafe_allow_html=True)
+                st.markdown(f'<div class="cm-section-h">🎬 {t("results_title", lang)}</div>',
+                            unsafe_allow_html=True)
                 for i, rec in enumerate(recs, 1):
-                    render_result_card(rec, i, lang)
+                    render_result(rec, i, lang)
 
-                # Save to history
                 st.session_state.history.append({
-                    "query": query,
-                    "recs": [r["title"] for r in recs],
+                    "query": query, "recs": [r["title"] for r in recs],
                 })
 
-        # Show recent history
         if st.session_state.history:
-            with st.expander("🕘 Recent searches"):
+            with st.expander("🕘 " + ("חיפושים אחרונים" if lang == "he" else "Recent searches")):
                 for h in reversed(st.session_state.history[-5:]):
                     st.write(f"**{h['query']}** → {', '.join(h['recs'])}")
 
-    # ── Tab 2: Research
     with tab2:
-        render_research_tab(catalog, log, eval_res, lang)
+        render_research_tab(catalog, log, eval_res, trends, lang)
 
-    # ── Tab 3: About
     with tab3:
         render_about_tab(catalog, lang)
 

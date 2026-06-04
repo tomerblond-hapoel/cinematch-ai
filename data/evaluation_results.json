@@ -5,7 +5,9 @@
     "Cosine-numeric vs Cosine-text": 0.0622,
     "Jaccard vs Hybrid": 0.7638,
     "Cosine-numeric vs Hybrid": 0.6189,
-    "Cosine-text vs Hybrid": 0.6552
+    "Cosine-text vs Hybrid": 0.6552,
+    "TF-IDF vs Hybrid": 0.033,
+    "TF-IDF vs Cosine-text": 0.05
   },
   "agreement_at_10": {
     "Jaccard vs Cosine-numeric": 0.069,
@@ -15,10 +17,13 @@
     "Cosine-text vs Hybrid": 0.3004
   },
   "precision_at_5": {
+    "Baseline-Random": 0.0,
+    "Baseline-Popularity": 0.0,
+    "Baseline-TFIDF": 0.1111,
     "Jaccard": 0.1111,
     "Cosine-numeric": 0.0,
     "Cosine-text": 0.2222,
-    "Hybrid": 0.2222
+    "Hybrid (chosen)": 0.2222
   },
   "anomaly_threshold_5pct": 0.7405,
   "best_score_stats": {

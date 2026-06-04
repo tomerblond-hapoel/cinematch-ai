@@ -15,9 +15,15 @@ import pandas as pd
 from engine.jaccard import top_k_jaccard
 from engine.cosine  import top_k_cosine_numeric, top_k_cosine_text
 
-ALPHA = 0.35   # Jaccard weight
-BETA  = 0.30   # Cosine-numeric weight
-# GAMMA = 1 - ALPHA - BETA = 0.35  → Cosine-text weight
+ALPHA = 0.35   # Jaccard weight (genre/era)
+BETA  = 0.30   # Cosine-numeric weight (rating/popularity profile)
+# GAMMA = 1 - ALPHA - BETA = 0.35  → Cosine-text weight (semantic plot)
+
+# ── Bias 2 mitigation (see report Section 8) ─────────────────────────────────
+# The multilingual model performs better on English text; Hebrew embedding quality
+# is lower. When the user queries in Hebrew we up-weight Jaccard (language-neutral,
+# genre-set based) and down-weight text-cosine (semantic embedding).
+HEBREW_WEIGHTS = {"alpha": 0.50, "beta": 0.30, "gamma": 0.20}
 
 
 def recommend(
@@ -30,7 +36,13 @@ def recommend(
     alpha: float = ALPHA,
     beta: float = BETA,
     exclude_titles: set = None,
+    query_lang: str = "en",
 ) -> pd.DataFrame:
+    # ── Bias 2 mitigation: re-weight for Hebrew queries ─────────────────────
+    if query_lang == "he":
+        alpha = HEBREW_WEIGHTS["alpha"]
+        beta  = HEBREW_WEIGHTS["beta"]
+        # gamma derived below = 0.20
     """
     Returns top_n recommendations as a DataFrame with columns:
       title, genres, rating, votes, decade_str, overview, poster_path,
