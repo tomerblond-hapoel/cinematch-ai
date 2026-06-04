@@ -5,7 +5,7 @@ Final project — AI & ML Innovation Workshop 2025.
 **Author:** Tomer Blond
 
 ## Live Demo
-Deployed on Render.com: [link added after deploy]
+Live Demo: https://antenna-sending-metric-fantasy.trycloudflare.com (Cloudflare Tunnel — active while Mac is on)
 
 ## GitHub
 https://github.com/tomerblond-hapoel/cinematch-ai
