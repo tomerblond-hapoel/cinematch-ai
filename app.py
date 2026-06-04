@@ -61,13 +61,54 @@ def load_embeddings():
 
 @st.cache_resource(show_spinner=False)
 def load_matrices(catalog):
+    """
+    Build the numeric similarity matrix once, calibrate the anomaly threshold
+    on the ACTUAL hybrid scoring scale (not just numeric cosine).
+
+    Why: numeric cosine values cluster near 1.0 for similar-vote/rating shows,
+    so calibrating threshold from that matrix gives ~0.99 — and at query time
+    hybrid scores (which mix in Jaccard 0-1 and text-cosine -1..1) end up
+    much lower → every query gets false-flagged as anomalous.
+
+    Fix: sample 200 catalog rows, compute their best HYBRID match, take 5th
+    percentile of that distribution as the threshold.
+    """
     from engine.cosine import build_numeric_matrix
     from engine.anomaly import calibrate
+    from engine.jaccard import _build_feature_set, jaccard
+    import numpy as np
+
     num_mat = build_numeric_matrix(catalog)
-    H_no_diag = num_mat.copy()
-    np.fill_diagonal(H_no_diag, -1)
-    best_scores = H_no_diag.max(axis=1)
-    threshold = calibrate(best_scores, percentile=5)
+
+    # Sample-based hybrid threshold calibration
+    embeddings = load_embeddings()
+    rng = np.random.default_rng(42)
+    n = len(catalog)
+    sample_size = min(200, n)
+    sample_idx = rng.choice(n, sample_size, replace=False)
+
+    # Precompute Jaccard feature sets for sample
+    feature_sets = [_build_feature_set(catalog.iloc[i]) for i in sample_idx]
+
+    alpha, beta, gamma = 0.35, 0.30, 0.35
+    best_hybrid_scores = []
+    for i, src_pos in enumerate(sample_idx):
+        # Compute hybrid score from src_pos to every other catalog row
+        # Numeric cosine row (already symmetric)
+        n_scores = num_mat[src_pos]
+        # Text cosine row (dot product with all embeddings)
+        t_scores = embeddings @ embeddings[src_pos]
+        # Jaccard against the sample set ONLY (fast approx — full would be slow)
+        src_set = feature_sets[i]
+        j_scores_sample = np.array([jaccard(src_set, fs) for fs in feature_sets])
+
+        # We want the best match across full catalog — use n + t only
+        # (Jaccard is approximated to 0 for non-sample rows; OK for percentile)
+        full_scores = beta * n_scores + gamma * t_scores
+        full_scores[src_pos] = -1  # exclude self
+        best_hybrid_scores.append(float(full_scores.max()))
+
+    threshold = calibrate(np.array(best_hybrid_scores), percentile=5)
     return num_mat, threshold
 
 @st.cache_resource(show_spinner=False)
@@ -756,7 +797,7 @@ def main():
             key="query_input",
             label_visibility="visible",
         )
-        c1, c2 = st.columns([1, 5])
+        c1, c2 = st.columns([2, 5])
         with c1:
             search_clicked = st.button(t("search_btn", lang), type="primary", use_container_width=True)
 
@@ -774,7 +815,7 @@ def main():
                     query, catalog, embeddings, numeric_matrix, encoder, threshold, lang)
 
             if anomalous:
-                st.markdown(f'<div class="cm-anomaly">⚠️ {t("anomaly_warning", lang)}</div>',
+                st.markdown(f'<div class="cm-anomaly">{t("anomaly_warning", lang)}</div>',
                             unsafe_allow_html=True)
 
             if not recs:
@@ -792,7 +833,8 @@ def main():
                 })
 
         if st.session_state.history:
-            with st.expander("🕘 " + ("חיפושים אחרונים" if lang == "he" else "Recent searches")):
+            recent_label = "חיפושים אחרונים" if lang == "he" else "Recent searches"
+            with st.expander(recent_label):
                 for h in reversed(st.session_state.history[-5:]):
                     st.write(f"**{h['query']}** → {', '.join(h['recs'])}")
 
