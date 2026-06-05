@@ -53,7 +53,24 @@ st.set_page_config(
 
 @st.cache_resource(show_spinner=False)
 def load_catalog():
-    return pd.read_parquet(CATALOG_PATH)
+    cat = pd.read_parquet(CATALOG_PATH)
+    awards_path = BASE / "data" / "award_predictions.parquet"
+    if awards_path.exists():
+        try:
+            preds = pd.read_parquet(awards_path)[["title", "award_probability"]]
+            cat = cat.merge(preds, on="title", how="left")
+        except Exception:
+            pass
+    posters_path = BASE / "data" / "posters_backfill.json"
+    if posters_path.exists():
+        try:
+            backfill = json.load(open(posters_path))
+            if "poster_path" in cat.columns:
+                missing = cat["poster_path"].isna() | (cat["poster_path"].astype(str).str.len() == 0)
+                cat.loc[missing, "poster_path"] = cat.loc[missing, "title"].map(backfill).fillna("")
+        except Exception:
+            pass
+    return cat
 
 @st.cache_resource(show_spinner=False)
 def load_embeddings():
@@ -409,7 +426,7 @@ def render_hero(lang: str, llm_on: bool):
       <div class="cm-hero-title">🎬 CineMatch AI</div>
       <div class="cm-hero-sub">{t('app_subtitle', lang)}</div>
       <div class="cm-badge-row">
-        <span class="cm-badge cm-badge-accent">{'Claude API ✓' if llm_on else 'Offline mode'}</span>
+        <span class="cm-badge cm-badge-accent">{'LLM ✓' if llm_on else 'Offline mode'}</span>
         <span class="cm-badge">11,013 shows</span>
         <span class="cm-badge">4 sources</span>
         <span class="cm-badge">Hybrid AI</span>
@@ -435,18 +452,12 @@ EXAMPLE_QUERIES = {
 
 
 def render_example_chips(lang: str):
-    chips_html = '<div class="cm-chips">'
-    for i, q in enumerate(EXAMPLE_QUERIES.get(lang, EXAMPLE_QUERIES["en"])):
-        chips_html += f'<span class="cm-chip">💡 {q}</span>'
-    chips_html += '</div>'
-    st.markdown(chips_html, unsafe_allow_html=True)
-
-    # interactive chips via columns
-    cols = st.columns(len(EXAMPLE_QUERIES[lang]))
+    queries = EXAMPLE_QUERIES.get(lang, EXAMPLE_QUERIES["en"])
+    cols = st.columns(len(queries))
     picked = None
-    for i, q in enumerate(EXAMPLE_QUERIES[lang]):
+    for i, q in enumerate(queries):
         with cols[i]:
-            if st.button(q, key=f"chip_{i}", use_container_width=True):
+            if st.button(f"💡 {q}", key=f"chip_{i}", use_container_width=True):
                 picked = q
     return picked
 
@@ -513,6 +524,20 @@ def render_result(rec: dict, rank: int, lang: str):
     genres = rec.get("genres", "")
     ov = rec.get("overview", "") or ""
 
+    award_prob = rec.get("award_probability", None)
+    award_badge = ""
+    if award_prob is not None:
+        try:
+            p = float(award_prob)
+            if p >= 0.75:
+                label = "מועמד חזק לאמי/אוסקר" if lang == "he" else "Strong Emmy/Oscar candidate"
+                award_badge = f'<span class="cm-badge cm-badge-accent" style="margin-left:0.5rem;">🏆 {label} · {p:.0%}</span>'
+            elif p >= 0.50:
+                label = "מועמד אפשרי" if lang == "he" else "Possible nominee"
+                award_badge = f'<span class="cm-badge" style="margin-left:0.5rem;">⭐ {label} · {p:.0%}</span>'
+        except (TypeError, ValueError):
+            pass
+
     st.markdown('<div class="cm-result">', unsafe_allow_html=True)
     c_img, c_main = st.columns([1, 5])
     with c_img:
@@ -529,7 +554,7 @@ def render_result(rec: dict, rank: int, lang: str):
         st.markdown(
             f'<div style="display:flex;align-items:center;">'
             f'<span class="cm-rank">{rank}</span>'
-            f'<div><div class="cm-title">{rec.get("title","")}</div>'
+            f'<div><div class="cm-title">{rec.get("title","")}{award_badge}</div>'
             f'<div class="cm-meta">⭐ {rating_str} · {decade} · {genres}</div></div>'
             f'</div>',
             unsafe_allow_html=True
@@ -706,6 +731,40 @@ def render_research_tab(catalog, log, eval_res, trends, lang):
             st.plotly_chart(fig_pr, use_container_width=True)
             st.caption(f"Anomaly threshold (5th percentile): **{eval_res.get('anomaly_threshold_5pct','')}**")
 
+    # ── Award prediction model — Top 10 contenders
+    awards_preds_path = BASE / "data" / "award_predictions.parquet"
+    awards_eval_path = BASE / "data" / "award_model_eval.json"
+    if awards_preds_path.exists():
+        try:
+            ap = pd.read_parquet(awards_preds_path).sort_values(
+                "award_probability", ascending=False).head(10)
+            st.markdown('<div class="cm-section-h">🏆 Top 10 Predicted Award Contenders</div>',
+                        unsafe_allow_html=True)
+            if awards_eval_path.exists():
+                rep = json.load(open(awards_eval_path))
+                best = rep["models"][rep["best_model"]]
+                st.caption(
+                    f"Supervised model · best: **{rep['best_model']}** · "
+                    f"CV-AUC = {rep['best_cv_auc']:.3f} · "
+                    f"Test AUC = {best['test_roc_auc']:.3f} · "
+                    f"P@10 = {best['precision_at_10']:.2f}"
+                )
+            fig_a = px.bar(ap[::-1], x="award_probability", y="title", orientation="h",
+                           color="award_probability",
+                           color_continuous_scale=["#4fc3f7","#7c4dff","#ff6b9d"],
+                           range_x=[0, 1])
+            fig_a.update_layout(
+                plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                font=dict(color=BRAND["text"]),
+                yaxis=dict(gridcolor="rgba(255,255,255,0.05)"),
+                xaxis=dict(gridcolor="rgba(255,255,255,0.05)", tickformat=".0%"),
+                coloraxis_showscale=False,
+                margin=dict(t=20, b=30, l=10, r=10),
+            )
+            st.plotly_chart(fig_a, use_container_width=True)
+        except Exception:
+            pass
+
 
 # ── About tab ─────────────────────────────────────────────────────────────────
 
@@ -720,7 +779,7 @@ def render_about_tab(catalog, lang):
                 font-size:0.85rem;line-height:1.8;color:{BRAND['text']};">
       <div>📝 <strong>User Query</strong> (Hebrew or English, free text)</div>
       <div style="margin-left:1em;color:{BRAND['text_muted']};">↓</div>
-      <div>🤖 <strong>Claude claude-sonnet-4-6</strong> — intent parser (prompt-cached)</div>
+      <div>🤖 <strong>LLM</strong> — intent parser (prompt-cached)</div>
       <div style="margin-left:1em;color:{BRAND['text_muted']};">↓ {{seeds, mood, lang}}</div>
       <div>🔍 <strong>Three parallel similarity engines:</strong></div>
       <div style="margin-left:2em;color:{BRAND['accent']};">• Jaccard — discrete genres ∪ decade ∪ language</div>
@@ -731,7 +790,7 @@ def render_about_tab(catalog, lang):
       <div style="margin-left:1em;color:{BRAND['text_muted']};">↓</div>
       <div>🚨 <strong>Anomaly check</strong> — if best score &lt; 5th-percentile → graceful fallback</div>
       <div style="margin-left:1em;color:{BRAND['text_muted']};">↓</div>
-      <div>💬 <strong>Claude claude-sonnet-4-6</strong> — bilingual explanation generator</div>
+      <div>💬 <strong>LLM</strong> — bilingual explanation generator</div>
       <div style="margin-left:1em;color:{BRAND['text_muted']};">↓</div>
       <div>🎬 <strong>Top-5 recommendations</strong> + natural-language explanation</div>
     </div>
@@ -790,14 +849,16 @@ def main():
         # Search input
         default_q = st.session_state.preset_query
         st.session_state.preset_query = ""
+        st.caption(t("query_label", lang))
         query = st.text_input(
             t("query_label", lang),
             value=default_q,
             placeholder=t("query_placeholder", lang),
             key="query_input",
-            label_visibility="visible",
+            help="",
+            label_visibility="collapsed",
         )
-        c1, c2 = st.columns([2, 5])
+        c1, c2 = st.columns([1.5, 5.5])
         with c1:
             search_clicked = st.button(t("search_btn", lang), type="primary", use_container_width=True)
 
@@ -810,7 +871,7 @@ def main():
                 st.rerun()
 
         if search_clicked and query.strip():
-            with st.spinner("🤖 " + ("קלוד חושב..." if lang == "he" else "Claude is thinking...")):
+            with st.spinner("🤖 " + ("המודל חושב..." if lang == "he" else "Thinking...")):
                 recs, explanation, anomalous, detected_lang = run_search(
                     query, catalog, embeddings, numeric_matrix, encoder, threshold, lang)
 

@@ -122,6 +122,34 @@ def test_anomaly_detection():
     print("✅ Test 4 (failure case) PASSED — anomaly detection ran correctly")
 
 
+# ── Test 5: Award prediction model produces sane probabilities ────────────────
+
+def test_award_model_predictions():
+    """The trained award model should rank well-known shows above noise."""
+    preds_path = os.path.join(BASE, "data", "award_predictions.parquet")
+    eval_path = os.path.join(BASE, "data", "award_model_eval.json")
+    assert os.path.exists(preds_path), "award_predictions.parquet missing — run engine.awards"
+    assert os.path.exists(eval_path), "award_model_eval.json missing"
+
+    preds = pd.read_parquet(preds_path)
+    assert "award_probability" in preds.columns
+    assert preds["award_probability"].between(0.0, 1.0).all(), "probabilities out of [0,1]"
+
+    import json as _json
+    rep = _json.load(open(eval_path))
+    best = rep["models"][rep["best_model"]]
+    assert best["test_roc_auc"] >= 0.70, f"Test AUC too low: {best['test_roc_auc']}"
+
+    # Famous shows should score high
+    for title in ["Breaking Bad", "Game of Thrones", "The Sopranos"]:
+        row = preds[preds["title"] == title]
+        if not row.empty:
+            prob = float(row.iloc[0]["award_probability"])
+            assert prob >= 0.50, f"{title} probability suspiciously low: {prob}"
+    print("✅ Test 5 (award model) PASSED — best CV-AUC =",
+          f"{rep['best_cv_auc']:.3f}, test AUC = {best['test_roc_auc']:.3f}")
+
+
 # ── Runner ─────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
@@ -133,6 +161,7 @@ if __name__ == "__main__":
         test_hebrew_intent_parsing,
         test_textonly_search,
         test_anomaly_detection,
+        test_award_model_predictions,
     ]
     passed = 0
     for test in tests:

@@ -28,20 +28,14 @@ STRINGS = {
         "data_sources":     "Data Sources",
         "about_title":      "About CineMatch AI",
         "about_text": (
-            "**CineMatch AI** is a bilingual AI-powered TV & movie recommendation agent "
-            "built as the final project for the AI & ML Innovation Workshop (2025).\n\n"
-            "**Data:** 4 sources, 166,592 raw rows → {n} clean titles after filtering and deduplication.\n\n"
-            "**Algorithm:** Hybrid of Jaccard similarity (genre/era matching), "
-            "Cosine similarity on numeric features (rating, popularity, year), "
-            "and Cosine similarity on multilingual plot embeddings (384-dim, sentence-transformers).\n\n"
-            "**Agent:** Natural-language queries parsed by Claude claude-sonnet-4-6 with prompt caching. "
-            "Explanations generated in the user's detected language (Hebrew or English).\n\n"
-            "**Author:** Tomer Blond — AI & ML Innovation Workshop 2025"
+            "**CineMatch AI** is a bilingual TV & movie recommender built for the AI & ML Innovation Workshop (2025).\n\n"
+            "**Method:** Hybrid similarity over a cleaned catalog of {n} titles (4 sources, 166,592 raw rows) — Jaccard on discrete features, Cosine on numeric features, and Cosine on 384-dim multilingual plot embeddings. A supervised model predicts Emmy/Oscar candidacy from rating, votes, era and genre signals. An LLM parses free-text queries and writes explanations in the user's language.\n\n"
+            "**Authors:** Tomer Blond & Omer Zion — AI & ML Innovation Workshop 2025"
         ),
         "source_row": "{name}: {raw:,} raw → {clean:,} clean ({pct}% kept)",
         "sidebar_lang":     "🌐 Language / שפה",
-        "powered_by":       "Powered by Claude claude-sonnet-4-6 + sentence-transformers",
-        "llm_status_on":    "✅ Claude API connected",
+        "powered_by":       "Hybrid similarity engine + multilingual embeddings + LLM",
+        "llm_status_on":    "✅ LLM connected",
         "llm_status_off":   "⚡ Running in offline mode (no API key)",
     },
     "he": {
@@ -71,20 +65,14 @@ STRINGS = {
         "data_sources":     "מקורות הנתונים",
         "about_title":      "אודות CineMatch AI",
         "about_text": (
-            "**CineMatch AI** הוא סוכן המלצות דו-לשוני לסדרות וסרטים, "
-            "שפותח כפרויקט גמר לסדנת חדשנות מבוססת AI ו-ML (2025).\n\n"
-            "**נתונים:** 4 מקורות, 166,592 שורות גולמיות → {n} כותרות נקיות לאחר סינון וביטול כפילויות.\n\n"
-            "**אלגוריתם:** שילוב של דמיון Jaccard (התאמת ז'אנר/עידן), "
-            "דמיון Cosine על מאפיינים מספריים (ציון, פופולריות, שנה), "
-            "ודמיון Cosine על embeddings רב-לשוניים של עלילות (384 ממד).\n\n"
-            "**סוכן:** שאילתות בשפה טבעית מנותחות על ידי Claude claude-sonnet-4-6 עם prompt caching. "
-            "הסברים נוצרים בשפה המזוהה של המשתמש (עברית או אנגלית).\n\n"
-            "**מחבר:** תומר בלונד — סדנת חדשנות מבוססת AI ו-ML 2025"
+            "**CineMatch AI** הוא ממליץ דו-לשוני לסדרות וסרטים שפותח לסדנת חדשנות מבוססת AI ו-ML (2025).\n\n"
+            "**שיטה:** דמיון היברידי על קטלוג נקי של {n} כותרות (4 מקורות, 166,592 שורות גולמיות) — Jaccard על מאפיינים בדידים, Cosine על מאפיינים מספריים, ו-Cosine על embeddings רב-לשוניים בגודל 384. מודל מבוסס למידה חזויה את הסיכוי למועמדות Emmy/Oscar מתוך ציון, פופולריות, עידן וז'אנר. שאילתות חופשיות מפוענחות על ידי מודל שפה והסברים נכתבים בשפת המשתמש.\n\n"
+            "**מחברים:** תומר בלונד ועומר ציון — סדנת חדשנות מבוססת AI ו-ML 2025"
         ),
         "source_row": "{name}: {raw:,} שורות גולמיות → {clean:,} נקיות ({pct}% נשמרו)",
         "sidebar_lang":     "🌐 Language / שפה",
-        "powered_by":       "מופעל על ידי Claude claude-sonnet-4-6 + sentence-transformers",
-        "llm_status_on":    "✅ Claude API מחובר",
+        "powered_by":       "מנוע דמיון היברידי + embeddings רב-לשוניים + מודל שפה",
+        "llm_status_on":    "✅ מודל השפה מחובר",
         "llm_status_off":   "⚡ מצב אופליין (ללא API key)",
     },
 }

@@ -1,0 +1,94 @@
+{
+  "models": {
+    "logistic_regression": {
+      "cv_auc_mean": 0.8846649960704289,
+      "cv_auc_std": 0.02028238365110488,
+      "cv_auc_folds": [
+        0.852816484953482,
+        0.8685834700693814,
+        0.8992907801418439,
+        0.8985393448159406,
+        0.9040949003714962
+      ],
+      "test_roc_auc": 0.8943047496238986,
+      "test_avg_precision": 0.34083649477628913,
+      "precision_at_10": 0.4,
+      "recall_at_10": 0.045454545454545456,
+      "precision_at_50": 0.4,
+      "confusion_matrix_at_0.5": [
+        [
+          1699,
+          416
+        ],
+        [
+          13,
+          75
+        ]
+      ]
+    },
+    "random_forest": {
+      "cv_auc_mean": 0.84696791962144,
+      "cv_auc_std": 0.009073474611268771,
+      "cv_auc_folds": [
+        0.8371661072288253,
+        0.8427216165116065,
+        0.8632767646065518,
+        0.849645390070922,
+        0.8420297196892943
+      ],
+      "test_roc_auc": 0.8829464861379756,
+      "test_avg_precision": 0.2952614356598777,
+      "precision_at_10": 0.4,
+      "recall_at_10": 0.045454545454545456,
+      "precision_at_50": 0.42,
+      "confusion_matrix_at_0.5": [
+        [
+          2072,
+          43
+        ],
+        [
+          61,
+          27
+        ]
+      ]
+    }
+  },
+  "feature_cols": [
+    "rating_z",
+    "votes_z",
+    "start_year_z",
+    "popularity_z",
+    "votes_log_z",
+    "decade_1940s",
+    "decade_1950s",
+    "decade_1960s",
+    "decade_1970s",
+    "decade_1980s",
+    "decade_1990s",
+    "decade_2000s",
+    "decade_2010s",
+    "decade_2020s",
+    "decade_Unknown",
+    "genre_Drama",
+    "genre_Comedy",
+    "genre_Animation",
+    "genre_Crime",
+    "genre_Action & Adventure",
+    "genre_Sci-Fi & Fantasy",
+    "genre_Mystery",
+    "genre_Documentary",
+    "genre_Family",
+    "genre_Action",
+    "genre_Adventure",
+    "genre_Reality",
+    "genre_Kids",
+    "genre_Romance",
+    "genre_Soap"
+  ],
+  "n_train": 8810,
+  "n_test": 2203,
+  "n_positive_train": 352,
+  "n_positive_test": 88,
+  "best_model": "logistic_regression",
+  "best_cv_auc": 0.8846649960704289
+}

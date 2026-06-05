@@ -1,0 +1,15 @@
+{
+  "emmy_pages": [
+    "https://en.wikipedia.org/wiki/Primetime_Emmy_Award_for_Outstanding_Drama_Series",
+    "https://en.wikipedia.org/wiki/Primetime_Emmy_Award_for_Outstanding_Comedy_Series",
+    "https://en.wikipedia.org/wiki/Primetime_Emmy_Award_for_Outstanding_Limited_or_Anthology_Series"
+  ],
+  "oscar_pages": [
+    "https://en.wikipedia.org/wiki/Academy_Award_for_Best_Picture"
+  ],
+  "n_emmy_winners": 781,
+  "n_emmy_nominees": 2105,
+  "n_oscar_winners": 101,
+  "n_oscar_nominees": 830,
+  "n_positive_matches_in_catalog": 440
+}
