@@ -191,6 +191,10 @@ def inject_css(lang: str):
         font-size: 15px !important;
         transition: all 0.2s ease !important;
         box-shadow: 0 4px 12px rgba(79,195,247,0.25) !important;
+        height: 60px !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+        line-height: 1.3 !important;
     }}
     .stButton > button:hover {{
         transform: translateY(-1px) !important;
@@ -863,8 +867,8 @@ def main():
             help="",
             label_visibility="collapsed",
         )
-        c1, c2 = st.columns([1.5, 5.5])
-        with c1:
+        c_left, c_btn, c_right = st.columns([2.5, 2, 2.5])
+        with c_btn:
             search_clicked = st.button(t("search_btn", lang), type="primary", use_container_width=True)
 
         # Example chips
@@ -906,10 +910,17 @@ def main():
                 })
 
         if st.session_state.history:
-            recent_label = "חיפושים אחרונים" if lang == "he" else "Recent searches"
+            recent_label = "🕓 חיפושים אחרונים" if lang == "he" else "🕓 Recent searches"
             with st.expander(recent_label):
                 for h in reversed(st.session_state.history[-5:]):
-                    st.write(f"**{h['query']}** → {', '.join(h['recs'])}")
+                    is_he = bool(__import__("re").search(r"[֐-׿]", h["query"]))
+                    d = "rtl" if is_he else "ltr"
+                    ta = "right" if is_he else "left"
+                    st.markdown(
+                        f'<div style="direction:{d};text-align:{ta};padding:4px 0;border-bottom:1px solid #252b3d;">'
+                        f'<strong>{h["query"]}</strong> → {", ".join(h["recs"])}</div>',
+                        unsafe_allow_html=True
+                    )
 
     with tab2:
         render_research_tab(catalog, log, eval_res, trends, lang)
