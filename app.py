@@ -152,6 +152,34 @@ def inject_css(lang: str):
         font-family: {font_stack} !important;
         direction: {direction} !important;
     }}
+    /* ── RTL: all text elements align to the correct side ── */
+    p, span, div, label, caption, h1, h2, h3, h4 {{
+        text-align: {align_main} !important;
+        direction: {direction} !important;
+    }}
+    /* Streamlit internal containers */
+    .stMarkdown, .stCaption, .stText,
+    [data-testid="stMarkdownContainer"],
+    [data-testid="stCaptionContainer"],
+    [data-testid="column"] {{
+        direction: {direction} !important;
+        text-align: {align_main} !important;
+    }}
+    /* Tabs — keep centered regardless of direction */
+    .stTabs [data-baseweb="tab-list"],
+    .stTabs [data-baseweb="tab"] {{
+        direction: ltr !important;
+    }}
+    /* Selectbox / dropdown */
+    [data-baseweb="select"] {{
+        direction: {direction} !important;
+        text-align: {align_main} !important;
+    }}
+    /* Expander label */
+    [data-testid="stExpander"] summary {{
+        direction: {direction} !important;
+        text-align: {align_main} !important;
+    }}
     .stApp {{
         background:
           radial-gradient(ellipse 80% 50% at 50% 0%, rgba(124,77,255,0.15), transparent),
@@ -420,9 +448,9 @@ def inject_css(lang: str):
 
 def render_hero(lang: str, llm_on: bool):
     st.markdown(f"""
-    <div class="cm-hero">
+    <div class="cm-hero" dir="ltr">
       <div class="cm-hero-title">🎬 CineMatch AI</div>
-      <div class="cm-hero-sub">{t('app_subtitle', lang)}</div>
+      <div class="cm-hero-sub" dir="{direction}" style="direction:{direction};">{t('app_subtitle', lang)}</div>
       <div class="cm-badge-row">
         <span class="cm-badge cm-badge-accent" title="{'LLM-powered' if llm_on else 'Running without LLM API — recommendations still work'}">
           {'🟢 LLM Active' if llm_on else '⚫ No LLM API (recommendations still work)'}
@@ -863,7 +891,11 @@ def main():
         # Search input
         default_q = st.session_state.preset_query
         st.session_state.preset_query = ""
-        st.caption(t("query_label", lang))
+        st.markdown(
+            f'<p style="direction:{direction};text-align:{align_main};color:{BRAND["text_muted"]};font-size:0.9rem;margin-bottom:0.3rem;">'
+            f'{t("query_label", lang)}</p>',
+            unsafe_allow_html=True
+        )
         query = st.text_input(
             t("query_label", lang),
             value=default_q,
@@ -883,7 +915,11 @@ def main():
 
         # Example chips
         if not query and not search_clicked:
-            st.caption(("💡 דוגמאות:" if lang == "he" else "💡 Try one of these:"))
+            st.markdown(
+                f'<p style="direction:{direction};text-align:{align_main};color:{BRAND["text_muted"]};font-size:0.85rem;">'
+                f'{"💡 דוגמאות:" if lang == "he" else "💡 Try one of these:"}</p>',
+                unsafe_allow_html=True
+            )
             picked = render_example_chips(lang)
             if picked:
                 if "query_input" in st.session_state:
