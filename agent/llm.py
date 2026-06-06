@@ -101,6 +101,9 @@ def _call_llm(system: str, user: str, max_tokens: int = 600) -> Optional[str]:
             response = _gemini_model.generate_content(prompt)
             return response.text.strip()
         except Exception as e:
+            # Surface error so we can debug
+            import streamlit as st
+            st.warning(f"⚠️ Gemini error: {type(e).__name__}: {e}")
             return None
 
     if _provider == "anthropic":
