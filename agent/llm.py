@@ -39,7 +39,7 @@ def _get_client():
         try:
             import google.generativeai as genai
             genai.configure(api_key=gemini_key)
-            _gemini_model = genai.GenerativeModel("gemini-2.0-flash")
+            _gemini_model = genai.GenerativeModel("gemini-2.0-flash-lite")
             _provider = "gemini"
             return True
         except Exception:
