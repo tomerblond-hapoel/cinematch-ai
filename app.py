@@ -568,47 +568,32 @@ def render_result(rec: dict, rank: int, lang: str):
         except (TypeError, ValueError):
             pass
 
-    st.markdown(f"""
-    <div class="cm-result" dir="{dir_attr}" style="text-align:{t_align};">
-      <div style="display:flex;gap:1rem;align-items:flex-start;flex-direction:{flex_dir};">
-        <div style="flex:0 0 auto;">{poster_html}</div>
-        <div style="flex:1;min-width:0;">
-          <div style="display:flex;align-items:center;gap:0.5rem;flex-direction:{flex_dir};margin-bottom:0.2rem;">
-            <span class="cm-rank">{rank}</span>
-            <span style="font-size:1.25rem;font-weight:700;color:{BRAND['text']};">{title}</span>
-            {award_html}
-          </div>
-          <div class="cm-meta">⭐ {rating_str} &nbsp;·&nbsp; {decade} &nbsp;·&nbsp; {genres}</div>
-
-          <div style="display:flex;justify-content:space-between;font-size:0.78rem;
-                      color:{BRAND['text_muted']};margin-top:0.6rem;">
-            <span><strong>{score_lbl}</strong></span>
-            <span style="color:{BRAND['accent']};font-weight:700;">{hybrid:.0%}</span>
-          </div>
-          {bar(hybrid, BRAND['gradient_1'])}
-
-          <div style="display:flex;gap:0.75rem;flex-direction:{flex_dir};">
-            <div style="flex:1;">
-              <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:{BRAND['text_muted']};">
-                <span>{genre_lbl}</span><span style="color:{BRAND['accent']};font-weight:600;">{j:.0%}</span>
-              </div>{bar(j, BRAND['accent'])}
-            </div>
-            <div style="flex:1;">
-              <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:{BRAND['text_muted']};">
-                <span>{prof_lbl}</span><span style="color:{BRAND['accent_2']};font-weight:600;">{n:.0%}</span>
-              </div>{bar(n, BRAND['accent_2'])}
-            </div>
-            <div style="flex:1;">
-              <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:{BRAND['text_muted']};">
-                <span>{plot_lbl}</span><span style="color:{BRAND['accent_warm']};font-weight:600;">{tx:.0%}</span>
-              </div>{bar(tx, BRAND['accent_warm'])}
-            </div>
-          </div>
-          {plot_html}
-        </div>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
+    html = (
+        f'<div class="cm-result" dir="{dir_attr}" style="text-align:{t_align};">'
+        f'<div style="display:flex;gap:1rem;align-items:flex-start;flex-direction:{flex_dir};">'
+        f'<div style="flex:0 0 auto;">{poster_html}</div>'
+        f'<div style="flex:1;min-width:0;">'
+        f'<div style="display:flex;align-items:center;gap:0.5rem;flex-direction:{flex_dir};margin-bottom:0.2rem;">'
+        f'<span class="cm-rank">{rank}</span>'
+        f'<span style="font-size:1.25rem;font-weight:700;color:{BRAND["text"]};">{title}</span>'
+        f'{award_html}</div>'
+        f'<div class="cm-meta">⭐ {rating_str} · {decade} · {genres}</div>'
+        f'<div style="display:flex;justify-content:space-between;font-size:0.78rem;color:{BRAND["text_muted"]};margin-top:0.6rem;">'
+        f'<span><strong>{score_lbl}</strong></span>'
+        f'<span style="color:{BRAND["accent"]};font-weight:700;">{hybrid:.0%}</span></div>'
+        f'{bar(hybrid, BRAND["accent"])}'
+        f'<div style="display:flex;gap:0.75rem;flex-direction:{flex_dir};">'
+        f'<div style="flex:1;"><div style="display:flex;justify-content:space-between;font-size:0.72rem;color:{BRAND["text_muted"]};">'
+        f'<span>{genre_lbl}</span><span style="color:{BRAND["accent"]};font-weight:600;">{j:.0%}</span></div>{bar(j, BRAND["accent"])}</div>'
+        f'<div style="flex:1;"><div style="display:flex;justify-content:space-between;font-size:0.72rem;color:{BRAND["text_muted"]};">'
+        f'<span>{prof_lbl}</span><span style="color:{BRAND["accent_2"]};font-weight:600;">{n:.0%}</span></div>{bar(n, BRAND["accent_2"])}</div>'
+        f'<div style="flex:1;"><div style="display:flex;justify-content:space-between;font-size:0.72rem;color:{BRAND["text_muted"]};">'
+        f'<span>{plot_lbl}</span><span style="color:{BRAND["accent_warm"]};font-weight:600;">{tx:.0%}</span></div>{bar(tx, BRAND["accent_warm"])}</div>'
+        f'</div>'
+        f'{plot_html}'
+        f'</div></div></div>'
+    )
+    st.markdown(html, unsafe_allow_html=True)
 
 
 # ── Research tab ──────────────────────────────────────────────────────────────
