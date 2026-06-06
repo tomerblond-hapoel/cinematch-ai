@@ -447,10 +447,11 @@ def inject_css(lang: str):
 # ── Hero & Search ──────────────────────────────────────────────────────────────
 
 def render_hero(lang: str, llm_on: bool):
+    _dir = "rtl" if lang == "he" else "ltr"
     st.markdown(f"""
     <div class="cm-hero" dir="ltr">
       <div class="cm-hero-title">🎬 CineMatch AI</div>
-      <div class="cm-hero-sub" dir="{direction}" style="direction:{direction};">{t('app_subtitle', lang)}</div>
+      <div class="cm-hero-sub" dir="{_dir}" style="direction:{_dir};">{t('app_subtitle', lang)}</div>
       <div class="cm-badge-row">
         <span class="cm-badge cm-badge-accent" title="{'LLM-powered' if llm_on else 'Running without LLM API — recommendations still work'}">
           {'🟢 LLM Active' if llm_on else '⚫ No LLM API (recommendations still work)'}
@@ -866,6 +867,9 @@ def main():
             st.rerun()
 
     # ── Resource check
+    direction  = "rtl" if lang == "he" else "ltr"
+    align_main = "right" if lang == "he" else "left"
+
     if not CATALOG_PATH.exists() or not EMB_PATH.exists():
         st.error("Data files missing. Run `python data/load_catalog.py` and `python data/embed.py` first.")
         st.stop()
