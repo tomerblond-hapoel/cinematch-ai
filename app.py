@@ -994,16 +994,31 @@ def main():
                 st.info(t("no_results", dlang))
             else:
                 t_align_d = "right" if dlang == "he" else "left"
-                flex_dir_d = "row-reverse" if dlang == "he" else "row"
+                if dlang == "he":
+                    st.markdown("""
+                    <style>
+                    .cm-results-area, .cm-results-area * {
+                        direction: rtl !important;
+                        text-align: right !important;
+                    }
+                    .cm-results-area [style*="display:flex"] {
+                        text-align: unset !important;
+                    }
+                    </style>
+                    """, unsafe_allow_html=True)
                 st.markdown(
+                    f'<div class="cm-results-area">'
                     f'<div class="cm-explanation" dir="{dlang_dir}" '
-                    f'style="text-align:{t_align_d};direction:{dlang_dir};">💬 {explanation}</div>',
+                    f'style="text-align:{t_align_d} !important;direction:{dlang_dir} !important;">💬 {explanation}</div>'
+                    f'</div>',
                     unsafe_allow_html=True)
                 results_title = "ההמלצות שלנו" if dlang == "he" else "Top Recommendations"
                 st.markdown(
-                    f'<div class="cm-section-h" dir="{dlang_dir}" '
-                    f'style="direction:{dlang_dir};justify-content:flex-{'end' if dlang=='he' else 'start'};flex-direction:{flex_dir_d};">'
-                    f'🎬 {results_title}</div>',
+                    f'<div class="cm-results-area">'
+                    f'<div style="font-size:1.4rem;font-weight:700;color:{BRAND["text"]};'
+                    f'margin:1.5rem 0 1rem;direction:{dlang_dir} !important;'
+                    f'text-align:{t_align_d} !important;">🎬 {results_title}</div>'
+                    f'</div>',
                     unsafe_allow_html=True)
                 for i, rec in enumerate(recs, 1):
                     render_result(rec, i, dlang)
