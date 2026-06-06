@@ -311,6 +311,19 @@ def inject_css(lang: str):
         position: relative;
         overflow: visible;
     }}
+    .cm-result[dir="rtl"], .cm-result[dir="rtl"] * {{
+        direction: rtl !important;
+        text-align: right !important;
+    }}
+    .cm-result[dir="ltr"], .cm-result[dir="ltr"] * {{
+        direction: ltr !important;
+        text-align: left !important;
+    }}
+    /* flex containers inside cards should not force text-align */
+    .cm-result[dir="rtl"] [style*="display:flex"],
+    .cm-result[dir="ltr"] [style*="display:flex"] {{
+        text-align: unset !important;
+    }}
     .cm-result:hover {{
         border-color: {BRAND['border_hover']};
         border-top-color: {BRAND['accent']};
@@ -610,29 +623,44 @@ def render_result(rec: dict, rank: int, lang: str):
         except (TypeError, ValueError):
             pass
 
+    def score_row(label, val, color):
+        if is_rtl:
+            return (
+                f'<div style="display:flex;justify-content:space-between;font-size:0.72rem;'
+                f'color:{BRAND["text_muted"]};direction:rtl;">'
+                f'<span style="color:{color};font-weight:600;">{val:.0%}</span>'
+                f'<span>{label}</span></div>'
+            )
+        return (
+            f'<div style="display:flex;justify-content:space-between;font-size:0.72rem;'
+            f'color:{BRAND["text_muted"]};">'
+            f'<span>{label}</span>'
+            f'<span style="color:{color};font-weight:600;">{val:.0%}</span></div>'
+        )
+
     html = (
         f'<div class="cm-result" dir="{dir_attr}" style="text-align:{t_align};">'
         f'<div style="display:flex;gap:1rem;align-items:flex-start;flex-direction:{flex_dir};">'
         f'<div style="flex:0 0 auto;">{poster_html}</div>'
-        f'<div style="flex:1;min-width:0;">'
+        f'<div style="flex:1;min-width:0;direction:{dir_attr};text-align:{t_align};">'
         f'<div style="display:flex;align-items:center;gap:0.5rem;flex-direction:{flex_dir};margin-bottom:0.2rem;">'
         f'<span class="cm-rank">{rank}</span>'
         f'<span style="font-size:1.25rem;font-weight:700;color:{BRAND["text"]};">{title}</span>'
         f'{award_html}</div>'
-        f'<div class="cm-meta">⭐ {rating_str} · {decade} · {genres}</div>'
-        f'<div style="display:flex;justify-content:space-between;font-size:0.78rem;color:{BRAND["text_muted"]};margin-top:0.6rem;">'
-        f'<span><strong>{score_lbl}</strong></span>'
-        f'<span style="color:{BRAND["accent"]};font-weight:700;">{hybrid:.0%}</span></div>'
-        f'{bar(hybrid, BRAND["accent"])}'
-        f'<div style="display:flex;gap:0.75rem;flex-direction:{flex_dir};">'
-        + (f'<div style="flex:1;"><div style="display:flex;justify-content:space-between;font-size:0.72rem;color:{BRAND["text_muted"]};">'
-           f'<span>{genre_lbl}</span><span style="color:{BRAND["accent"]};font-weight:600;">{j:.0%}</span></div>{bar(j, BRAND["accent"])}</div>'
+        f'<div class="cm-meta" style="text-align:{t_align};direction:{dir_attr};">⭐ {rating_str} · {decade} · {genres}</div>'
+        + (f'<div style="display:flex;justify-content:space-between;font-size:0.78rem;'
+           f'color:{BRAND["text_muted"]};margin-top:0.6rem;direction:{dir_attr};">'
+           + (f'<span style="color:{BRAND["accent"]};font-weight:700;">{hybrid:.0%}</span><span><strong>{score_lbl}</strong></span>'
+              if is_rtl else
+              f'<span><strong>{score_lbl}</strong></span><span style="color:{BRAND["accent"]};font-weight:700;">{hybrid:.0%}</span>')
+           + f'</div>')
+        + f'{bar(hybrid, BRAND["accent"])}'
+        + f'<div style="display:flex;gap:0.75rem;flex-direction:{flex_dir};">'
+        + (f'<div style="flex:1;">{score_row(genre_lbl, j, BRAND["accent"])}{bar(j, BRAND["accent"])}</div>'
            if j > 0.01 else '')
-        + (f'<div style="flex:1;"><div style="display:flex;justify-content:space-between;font-size:0.72rem;color:{BRAND["text_muted"]};">'
-           f'<span>{prof_lbl}</span><span style="color:{BRAND["accent_2"]};font-weight:600;">{n:.0%}</span></div>{bar(n, BRAND["accent_2"])}</div>'
+        + (f'<div style="flex:1;">{score_row(prof_lbl, n, BRAND["accent_2"])}{bar(n, BRAND["accent_2"])}</div>'
            if n > 0.01 else '')
-        + (f'<div style="flex:1;"><div style="display:flex;justify-content:space-between;font-size:0.72rem;color:{BRAND["text_muted"]};">'
-           f'<span>{plot_lbl}</span><span style="color:{BRAND["accent_warm"]};font-weight:600;">{tx:.0%}</span></div>{bar(tx, BRAND["accent_warm"])}</div>'
+        + (f'<div style="flex:1;">{score_row(plot_lbl, tx, BRAND["accent_warm"])}{bar(tx, BRAND["accent_warm"])}</div>'
            if tx > 0.01 else '')
         + f'</div>'
         f'{plot_html}'
@@ -950,12 +978,7 @@ def main():
 
             # Back button — always on the right side
             back_label = "חזור →" if dlang == "he" else "← Back"
-            if dlang == "he":
-                # RTL: CSS reverses columns, so [1,6] puts first col on the right
-                back_col, _ = st.columns([1, 6])
-            else:
-                # LTR: [6,1] puts second col on the right
-                _, back_col = st.columns([6, 1])
+            _, back_col = st.columns([6, 1])
             with back_col:
                 if st.button(back_label, key="back_btn", use_container_width=True):
                     if "query_input" in st.session_state:
