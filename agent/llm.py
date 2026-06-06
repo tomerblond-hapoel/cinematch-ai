@@ -100,10 +100,7 @@ def _call_llm(system: str, user: str, max_tokens: int = 600) -> Optional[str]:
             prompt = f"{system}\n\n{user}"
             response = _gemini_model.generate_content(prompt)
             return response.text.strip()
-        except Exception as e:
-            # Surface error so we can debug
-            import streamlit as st
-            st.warning(f"⚠️ Gemini error: {type(e).__name__}: {e}")
+        except Exception:
             return None
 
     if _provider == "anthropic":
@@ -200,12 +197,33 @@ def explain_recommendations(intent: dict, recommendations: list[dict], lang: str
 
 
 def _fallback_explanation(intent: dict, recommendations: list[dict], lang: str) -> str:
+    mood = intent.get("mood", [])
+    seeds = intent.get("seeds", [])
+
     if lang == "he":
-        lines = ["הנה ההמלצות שלנו עבורך:"]
+        if seeds:
+            opener = f"מצאנו עבורך סדרות הדומות ל-{seeds[0]}:"
+        elif mood:
+            mood_str = ", ".join(mood)
+            opener = f"על פי מה שחיפשת ({mood_str}), אלו ההמלצות המתאימות ביותר:"
+        else:
+            opener = "אלו ההמלצות המובילות שלנו עבורך:"
+        lines = [opener]
         for r in recommendations:
-            lines.append(f"• {r['title']} ({r.get('genres','')}) — ציון: {r.get('rating','')}")
+            rating = r.get("rating", "")
+            rating_str = f"{rating:.1f}" if isinstance(rating, float) else str(rating)
+            lines.append(f"• {r['title']} — {r.get('genres','')} | ⭐ {rating_str}")
     else:
-        lines = ["Here are your personalized recommendations:"]
+        if seeds:
+            opener = f"Based on your interest in {seeds[0]}, here are the best matches:"
+        elif mood:
+            mood_str = ", ".join(mood)
+            opener = f"Looking for something {mood_str}? Here are our top picks:"
+        else:
+            opener = "Here are our top recommendations for you:"
+        lines = [opener]
         for r in recommendations:
-            lines.append(f"• {r['title']} ({r.get('genres','')}) — Rating: {r.get('rating','')}")
+            rating = r.get("rating", "")
+            rating_str = f"{rating:.1f}" if isinstance(rating, float) else str(rating)
+            lines.append(f"• {r['title']} — {r.get('genres','')} | ⭐ {rating_str}")
     return "\n".join(lines)
