@@ -262,28 +262,20 @@ def inject_css(lang: str):
     .cm-result {{
         background: linear-gradient(135deg, {BRAND['bg_card']} 0%, {BRAND['bg_card_alt']} 100%);
         border: 1px solid {BRAND['border']};
+        border-top: 3px solid {BRAND['border']};
         border-radius: 18px;
         padding: 1.5rem;
         margin-bottom: 1rem;
         transition: all 0.25s ease;
         position: relative;
-        overflow: hidden;
-    }}
-    .cm-result::before {{
-        content: '';
-        position: absolute;
-        top: 0; left: 0; right: 0;
-        height: 3px;
-        background: {BRAND['gradient_1']};
-        opacity: 0;
-        transition: opacity 0.25s ease;
+        overflow: visible;
     }}
     .cm-result:hover {{
         border-color: {BRAND['border_hover']};
+        border-top-color: {BRAND['accent']};
         transform: translateY(-2px);
         box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     }}
-    .cm-result:hover::before {{ opacity: 1; }}
     .cm-rank {{
         display: inline-flex;
         align-items: center;
@@ -426,10 +418,12 @@ def render_hero(lang: str, llm_on: bool):
       <div class="cm-hero-title">🎬 CineMatch AI</div>
       <div class="cm-hero-sub">{t('app_subtitle', lang)}</div>
       <div class="cm-badge-row">
-        <span class="cm-badge cm-badge-accent">{'LLM ✓' if llm_on else 'Offline mode'}</span>
-        <span class="cm-badge">11,013 shows</span>
-        <span class="cm-badge">4 sources</span>
-        <span class="cm-badge">Hybrid AI</span>
+        <span class="cm-badge cm-badge-accent" title="{'LLM-powered' if llm_on else 'Running without LLM API — recommendations still work'}">
+          {'🟢 LLM Active' if llm_on else '⚫ No LLM API (recommendations still work)'}
+        </span>
+        <span class="cm-badge" title="Number of TV shows and movies in the database">🗄️ 11,013 titles</span>
+        <span class="cm-badge" title="TMDb, Disney+, IMDb Top-10k, IMDb Top-5000">📂 4 data sources</span>
+        <span class="cm-badge" title="Jaccard + Cosine-numeric + Cosine-text combined">🧠 Hybrid AI engine</span>
       </div>
     </div>
     """, unsafe_allow_html=True)
@@ -538,9 +532,15 @@ def render_result(rec: dict, rank: int, lang: str):
         except (TypeError, ValueError):
             pass
 
-    st.markdown('<div class="cm-result">', unsafe_allow_html=True)
-    c_img, c_main = st.columns([1, 5])
-    with c_img:
+    dir_style = 'direction:rtl;text-align:right;' if lang == 'he' else 'direction:ltr;text-align:left;'
+    rank_margin = 'margin-left:12px;' if lang == 'he' else 'margin-right:12px;'
+    flex_dir = 'row-reverse' if lang == 'he' else 'row'
+
+    st.markdown(f'<div class="cm-result" style="{dir_style}">', unsafe_allow_html=True)
+    c_img, c_main = st.columns([1, 5]) if lang == 'en' else st.columns([5, 1])
+    img_col = c_img if lang == 'en' else c_main
+    txt_col = c_main if lang == 'en' else c_img
+    with img_col:
         if poster_url:
             st.image(poster_url, use_container_width=True)
         else:
@@ -550,11 +550,11 @@ def render_result(rec: dict, rank: int, lang: str):
                 f"font-size:2.5rem;color:{BRAND['text_muted']};'>🎬</div>",
                 unsafe_allow_html=True
             )
-    with c_main:
+    with txt_col:
         st.markdown(
-            f'<div style="display:flex;align-items:center;">'
-            f'<span class="cm-rank">{rank}</span>'
-            f'<div><div class="cm-title">{rec.get("title","")}{award_badge}</div>'
+            f'<div style="display:flex;align-items:center;flex-direction:{flex_dir};{dir_style}">'
+            f'<span class="cm-rank" style="{rank_margin}">{rank}</span>'
+            f'<div style="{dir_style}"><div class="cm-title">{rec.get("title","")}{award_badge}</div>'
             f'<div class="cm-meta">⭐ {rating_str} · {decade} · {genres}</div></div>'
             f'</div>',
             unsafe_allow_html=True
@@ -562,7 +562,7 @@ def render_result(rec: dict, rank: int, lang: str):
 
         # Hybrid score gauge
         st.markdown(
-            f'<div class="cm-score-label">'
+            f'<div class="cm-score-label" style="{dir_style}">'
             f'<span><strong>{t("score", lang)}</strong></span>'
             f'<span style="color:{BRAND["accent"]};font-weight:700;">{hybrid:.0%}</span>'
             f'</div>'
@@ -578,7 +578,7 @@ def render_result(rec: dict, rank: int, lang: str):
             (sc3, t("text_cosine", lang),tx, BRAND["accent_warm"]),
         ]:
             col.markdown(
-                f'<div class="cm-score-label">'
+                f'<div class="cm-score-label" style="{dir_style}">'
                 f'<span style="font-size:0.75rem;">{name}</span>'
                 f'<span style="font-size:0.75rem;color:{color};font-weight:600;">{val:.0%}</span>'
                 f'</div>'
@@ -587,8 +587,14 @@ def render_result(rec: dict, rank: int, lang: str):
             )
 
         if ov and len(ov) > 20:
-            with st.expander("📖 " + ("עלילה" if lang == "he" else "Plot")):
-                st.write(ov[:500] + ("..." if len(ov) > 500 else ""))
+            plot_label = "📖 עלילה" if lang == "he" else "📖 Plot"
+            with st.expander(plot_label):
+                st.markdown(
+                    f'<div style="{dir_style}padding:0.25rem 0;">'
+                    f'{ov[:500] + ("..." if len(ov) > 500 else "")}'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
 
     st.markdown('</div>', unsafe_allow_html=True)
 
