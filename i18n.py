@@ -39,7 +39,7 @@ STRINGS = {
         "llm_status_off":   "⚡ Running in offline mode (no API key)",
         "hero_line_1":      "YOUR NEXT OBSESSION",
         "hero_line_2":      "FINDS YOU.",
-        "hero_line_3":      "A cinematic agent that learns what you love — and shows you what's next.",
+        "hero_line_3":      "CineMatch AI",
         "hero_skip":        "Skip intro →",
     },
     "he": {
@@ -80,7 +80,7 @@ STRINGS = {
         "llm_status_off":   "⚡ מצב אופליין (ללא API key)",
         "hero_line_1":      "האובססיה הבאה שלך",
         "hero_line_2":      "מוצאת אותך.",
-        "hero_line_3":      "סוכן AI קולנועי שלומד מה אתה אוהב — ומראה לך מה הלאה.",
+        "hero_line_3":      "CineMatch AI",
         "hero_skip":        "← דלג על האינטרו",
     },
 }
