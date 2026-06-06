@@ -165,10 +165,12 @@ def inject_css(lang: str):
         direction: {direction} !important;
         text-align: {align_main} !important;
     }}
-    /* Tabs — keep centered regardless of direction */
-    .stTabs [data-baseweb="tab-list"],
+    /* Tabs — follow page direction */
+    .stTabs [data-baseweb="tab-list"] {{
+        direction: {direction} !important;
+    }}
     .stTabs [data-baseweb="tab"] {{
-        direction: ltr !important;
+        direction: {direction} !important;
     }}
     /* Selectbox / dropdown */
     [data-baseweb="select"] {{
@@ -942,9 +944,10 @@ def main():
             dlang_dir = "rtl" if dlang == "he" else "ltr"
 
             # Back button — top left
-            back_col, _ = st.columns([1, 6])
+            _, back_col = st.columns([6, 1]) if dlang == "he" else st.columns([1, 6])
             with back_col:
-                if st.button("← Back", key="back_btn", use_container_width=True):
+                back_label = "→ חזור" if dlang == "he" else "← Back"
+                if st.button(back_label, key="back_btn", use_container_width=True):
                     if "query_input" in st.session_state:
                         del st.session_state["query_input"]
                     st.session_state.auto_search = False
