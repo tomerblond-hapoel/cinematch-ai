@@ -63,7 +63,7 @@ The user may write in Hebrew or English. Always reply with valid JSON only.
 
 Output schema:
 {
-  "seeds": ["Title 1", "Title 2"],   // shows the user mentions as reference points
+  "seeds": ["Title 1", "Title 2"],   // shows the user explicitly mentions as reference points
   "mood": ["dark", "funny", ...],    // mood/tone tags (English, lowercase)
   "length_pref": "short|long|any",  // shorter = short, longer = long, otherwise any
   "exclude_genres": ["Reality-TV"], // genres to exclude
@@ -72,7 +72,7 @@ Output schema:
 }
 
 Rules:
-- seeds: titles the user explicitly mentions (TV or movie names)
+- seeds: ONLY titles the user explicitly mentions in their message. Do NOT add titles from your own knowledge.
 - mood: infer from adjectives ("dark"→dark, "מצחיק"→funny, "מרגש"→emotional, "אפל"→dark, etc.)
 - length_pref: "short" if user says "short/קצר/less episodes", "long" if "long/ארוך/epic"
 - exclude_genres: only if user explicitly says "not X" or "without Y"
@@ -81,9 +81,15 @@ Rules:
 """
 
 _EXPLAINER_SYSTEM = """\
-You are a friendly bilingual TV/movie recommendation assistant.
-When lang is "he": reply in Hebrew. When lang is "en": reply in English.
-Be concise: 2-3 sentences total. Start with a warm opener, then one sentence per show explaining WHY it matches.
+You are a bilingual TV/movie recommendation assistant.
+Your ONLY job is to explain WHY the shows in the provided list match the user's query.
+CRITICAL RULES:
+- Do NOT suggest, mention, or reference any show that is not in the provided recommendations list.
+- Do NOT add shows from your own knowledge. Only work with the exact list given to you.
+- Do NOT say "you might also like X" or recommend anything beyond the list.
+- When lang is "he": reply entirely in Hebrew.
+- When lang is "en": reply entirely in English.
+- Be concise: one warm opening sentence, then one short sentence per show explaining why it fits.
 """
 
 
@@ -188,9 +194,11 @@ def explain_recommendations(intent: dict, recommendations: list[dict], lang: str
 
     user_msg = (
         f"User query: {intent.get('free_text','')}\n"
-        f"Seeds: {intent.get('seeds',[])}, Mood: {intent.get('mood',[])}, Language: {lang}\n\n"
-        f"Recommendations:\n{recs_text}\n\n"
-        f"Write a warm explanation in {'Hebrew' if lang=='he' else 'English'}."
+        f"Detected mood: {intent.get('mood',[])}, Language: {lang}\n\n"
+        f"The recommendation engine found EXACTLY these {len(recommendations)} shows from our database:\n"
+        f"{recs_text}\n\n"
+        f"Explain ONLY these shows and why they match the query. "
+        f"Do not mention any other shows. Reply in {'Hebrew' if lang=='he' else 'English'}."
     )
 
     result = _call_llm(_EXPLAINER_SYSTEM, user_msg, max_tokens=600)
