@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CineMatch — intro</title>
+
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #0a0e1a; color: #fff; overflow-x: hidden; }
+  html, body { scrollbar-width: none; }
+  html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; }
+
+  .scrub-hero { position: relative; height: 400vh; }
+  .scrub-hero__sticky {
+    position: sticky; top: 0; height: 100vh; width: 100%;
+    overflow: hidden; background: #0a0e1a;
+  }
+  .scrub-hero__video {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%; object-fit: cover;
+    pointer-events: none;
+  }
+
+  .scrub-hero__overlay {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    text-align: center; color: white; pointer-events: none;
+    text-shadow: 0 2px 28px rgba(0,0,0,0.75);
+    font-family: 'Heebo', 'Inter', system-ui, -apple-system, sans-serif;
+    padding: 0 6vw;
+  }
+  .scrub-hero__overlay h1 {
+    font-size: clamp(2rem, 6.4vw, 5rem);
+    line-height: 1.05;
+    margin: 0.15em 0;
+    opacity: 0;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #4fc3f7 0%, #7c4dff 60%, #ff6b9d 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .scrub-hero__overlay h1.no-gradient {
+    background: none;
+    -webkit-text-fill-color: white;
+    color: white;
+  }
+  .scrub-hero__overlay p {
+    font-size: clamp(1rem, 1.6vw, 1.35rem);
+    max-width: 44ch;
+    opacity: 0;
+    color: rgba(232, 234, 237, 0.92);
+    margin-top: 0.6em;
+  }
+
+  /* Reduced-motion fallback: show poster, no scrub, fade chapters in immediately */
+  @media (prefers-reduced-motion: reduce) {
+    .scrub-hero { height: 100vh; }
+    .scrub-hero__overlay h1,
+    .scrub-hero__overlay p { opacity: 1 !important; transform: none !important; }
+  }
+</style>
+</head>
+<body dir="{{DIR}}">
+
+<section class="scrub-hero">
+  <div class="scrub-hero__sticky">
+    <video
+      class="scrub-hero__video"
+      src="https://cdn.jsdelivr.net/gh/omerzion999/cinematch-ai@main/assets/hero.mp4"
+      poster="https://cdn.jsdelivr.net/gh/omerzion999/cinematch-ai@main/assets/hero_poster.jpg"
+      muted
+      playsinline
+      preload="auto"
+      disablepictureinpicture
+    ></video>
+
+    <div class="scrub-hero__overlay">
+      <h1 data-chapter="1">{{LINE1}}</h1>
+      <h1 data-chapter="2" class="no-gradient">{{LINE2}}</h1>
+      <p  data-chapter="3">{{LINE3}}</p>
+    </div>
+  </div>
+</section>
+
+<script>
+(function () {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const section = document.querySelector('.scrub-hero');
+  const video   = section.querySelector('.scrub-hero__video');
+  const lines   = section.querySelectorAll('[data-chapter]');
+
+  function init() {
+    gsap.registerPlugin(ScrollTrigger);
+
+    ScrollTrigger.create({
+      trigger: section,
+      start: 'top top',
+      end:   'bottom bottom',
+      scrub: 0.6,
+      onUpdate: self => {
+        if (!isNaN(video.duration)) {
+          video.currentTime = self.progress * video.duration;
+        }
+      },
+    });
+
+    const points = [0.10, 0.40, 0.70];
+    lines.forEach((el, i) => {
+      gsap.fromTo(el, { opacity: 0, y: 24 }, {
+        opacity: 1, y: 0,
+        scrollTrigger: {
+          trigger: section,
+          start: `top+=${points[i] * 100}% top`,
+          end:   `top+=${(points[i] + 0.18) * 100}% top`,
+          scrub: true,
+        },
+      });
+    });
+  }
+
+  if (video.readyState >= 1) init();
+  else video.addEventListener('loadedmetadata', init);
+})();
+</script>
+</body>
+</html>

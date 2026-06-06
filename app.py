@@ -8,6 +8,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 import plotly.express as px
 import plotly.graph_objects as go
 from dotenv import load_dotenv
@@ -885,6 +886,32 @@ def render_about_tab(catalog, lang):
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
+HERO_COMPONENT_PATH = BASE / "hero_component.html"
+
+
+def render_cinematic_intro(lang: str):
+    # Skip is sticky: URL param OR a prior click in this session both suppress the hero.
+    if "skip_hero" not in st.session_state:
+        st.session_state.skip_hero = "skip_hero" in st.query_params
+
+    if st.session_state.skip_hero or not HERO_COMPONENT_PATH.exists():
+        return
+
+    _, sk = st.columns([6, 1])
+    if sk.button(t("hero_skip", lang), key="cinema_skip_btn", use_container_width=True):
+        st.session_state.skip_hero = True
+        st.query_params["skip_hero"] = "1"
+        st.rerun()
+
+    html = HERO_COMPONENT_PATH.read_text()
+    html = (html
+        .replace("{{LINE1}}", t("hero_line_1", lang))
+        .replace("{{LINE2}}", t("hero_line_2", lang))
+        .replace("{{LINE3}}", t("hero_line_3", lang))
+        .replace("{{DIR}}", "rtl" if lang == "he" else "ltr"))
+    components.html(html, height=800, scrolling=True)
+
+
 def main():
     if "lang" not in st.session_state:
         st.session_state.lang = "en"
@@ -928,6 +955,7 @@ def main():
     trends    = _json(TRENDS_PATH)
     llm_on    = llm_agent._get_client() is not None
 
+    render_cinematic_intro(lang)
     render_hero(lang, llm_on)
 
     tab1, tab2, tab3 = st.tabs([
