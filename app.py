@@ -171,8 +171,9 @@ def inject_css(lang: str):
         color: {BRAND['text']} !important;
         padding: 14px 18px !important;
         font-size: 16px !important;
-        direction: {direction} !important;
-        text-align: {align_main} !important;
+        direction: auto !important;
+        text-align: start !important;
+        unicode-bidi: plaintext !important;
         transition: all 0.2s ease !important;
     }}
     .stTextInput > div > div > input:focus {{
@@ -877,20 +878,27 @@ def main():
             with st.spinner("🤖 " + ("המודל חושב..." if lang == "he" else "Thinking...")):
                 recs, explanation, anomalous, detected_lang = run_search(
                     query, catalog, embeddings, numeric_matrix, encoder, threshold, lang)
+            st.session_state.detected_lang = detected_lang
+
+            dlang = detected_lang  # use query language for ALL result display
+            dlang_dir = "rtl" if dlang == "he" else "ltr"
 
             if anomalous:
-                st.markdown(f'<div class="cm-anomaly">{t("anomaly_warning", lang)}</div>',
+                st.markdown(f'<div class="cm-anomaly" dir="{dlang_dir}">{t("anomaly_warning", dlang)}</div>',
                             unsafe_allow_html=True)
 
             if not recs:
-                st.info(t("no_results", lang))
+                st.info(t("no_results", dlang))
             else:
-                st.markdown(f'<div class="cm-explanation">💬 {explanation}</div>',
-                            unsafe_allow_html=True)
-                st.markdown(f'<div class="cm-section-h">🎬 {t("results_title", lang)}</div>',
+                st.markdown(
+                    f'<div class="cm-explanation" dir="{dlang_dir}" '
+                    f'style="text-align:{"right" if dlang=="he" else "left"};">💬 {explanation}</div>',
+                    unsafe_allow_html=True)
+                results_title = "ההמלצות שלנו" if dlang == "he" else "Top Recommendations"
+                st.markdown(f'<div class="cm-section-h">🎬 {results_title}</div>',
                             unsafe_allow_html=True)
                 for i, rec in enumerate(recs, 1):
-                    render_result(rec, i, detected_lang)
+                    render_result(rec, i, dlang)
 
                 st.session_state.history.append({
                     "query": query, "recs": [r["title"] for r in recs],
