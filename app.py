@@ -886,7 +886,7 @@ def main():
             st.caption(("💡 דוגמאות:" if lang == "he" else "💡 Try one of these:"))
             picked = render_example_chips(lang)
             if picked:
-                st.session_state.preset_query = picked
+                st.session_state.query_input = picked
                 st.session_state.auto_search = True
                 st.rerun()
 
