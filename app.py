@@ -125,7 +125,7 @@ def load_matrices(catalog):
         full_scores[src_pos] = -1  # exclude self
         best_hybrid_scores.append(float(full_scores.max()))
 
-    threshold = calibrate(np.array(best_hybrid_scores), percentile=5)
+    threshold = calibrate(np.array(best_hybrid_scores), percentile=15)
     return num_mat, threshold
 
 @st.cache_resource(show_spinner=False)
@@ -550,6 +550,15 @@ def run_search(query: str, catalog, embeddings, numeric_matrix, encoder, thresho
     if not results_df.empty:
         best_score = float(results_df["hybrid_score"].iloc[0]) if "hybrid_score" in results_df else 0.0
         anomalous = is_anomalous(best_score, threshold)
+
+    # Extra check: if no seeds were found AND no meaningful mood/genre keywords
+    # detected by the LLM, treat as anomalous (handles gibberish / random chars)
+    if not anomalous and not seeds:
+        mood = intent.get("mood", "")
+        genres_intent = intent.get("genres", [])
+        has_intent = bool(mood and len(mood) > 3) or bool(genres_intent)
+        if not has_intent:
+            anomalous = True
 
     recs = results_df.to_dict("records") if not results_df.empty else []
     explanation = explain_recommendations(intent, recs, lang=detected_lang)
