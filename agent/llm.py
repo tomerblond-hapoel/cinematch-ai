@@ -14,13 +14,27 @@ _anthropic_client = None
 _provider = None  # "gemini" | "anthropic" | None
 
 
+def _read_secret(key: str) -> Optional[str]:
+    """Read a secret from st.secrets (Streamlit Cloud) or os.environ (local)."""
+    # 1. Try st.secrets first (Streamlit Cloud & local .streamlit/secrets.toml)
+    try:
+        import streamlit as st
+        val = st.secrets.get(key)
+        if val:
+            return str(val)
+    except Exception:
+        pass
+    # 2. Fallback to environment variable
+    return os.environ.get(key)
+
+
 def _get_client():
     global _gemini_model, _anthropic_client, _provider
     if _provider is not None:
         return True
 
     # Try Gemini first
-    gemini_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+    gemini_key = _read_secret("GEMINI_API_KEY") or _read_secret("GOOGLE_API_KEY")
     if gemini_key:
         try:
             import google.generativeai as genai
@@ -32,7 +46,7 @@ def _get_client():
             pass
 
     # Fallback to Anthropic
-    anthropic_key = os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_KEY")
+    anthropic_key = _read_secret("ANTHROPIC_API_KEY") or _read_secret("ANTHROPIC_KEY")
     if anthropic_key:
         try:
             import anthropic
