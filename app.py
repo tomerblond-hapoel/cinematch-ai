@@ -897,6 +897,12 @@ def render_cinematic_intro(lang: str):
     if st.session_state.skip_hero or not HERO_COMPONENT_PATH.exists():
         return
 
+    # Only autoplay on the first render of this session — subsequent reruns
+    # (search clicks, language flips) park the video on its last frame instead
+    # of replaying the 8-second intro every interaction.
+    first_load = not st.session_state.get("hero_played", False)
+    st.session_state.hero_played = True
+
     _, sk = st.columns([6, 1])
     if sk.button(t("hero_skip", lang), key="cinema_skip_btn", use_container_width=True):
         st.session_state.skip_hero = True
@@ -908,8 +914,9 @@ def render_cinematic_intro(lang: str):
         .replace("{{LINE1}}", t("hero_line_1", lang))
         .replace("{{LINE2}}", t("hero_line_2", lang))
         .replace("{{LINE3}}", t("hero_line_3", lang))
-        .replace("{{DIR}}", "rtl" if lang == "he" else "ltr"))
-    components.html(html, height=800, scrolling=True)
+        .replace("{{DIR}}", "rtl" if lang == "he" else "ltr")
+        .replace("{{FIRST_LOAD}}", "true" if first_load else "false"))
+    components.html(html, height=800, scrolling=False)
 
 
 def main():
