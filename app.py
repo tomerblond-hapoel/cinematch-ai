@@ -948,11 +948,15 @@ def main():
             dlang = detected_lang
             dlang_dir = "rtl" if dlang == "he" else "ltr"
 
-            # Back button — top left
-            # Always: [wide, narrow] — narrow col is always on the RIGHT
-            _, back_col = st.columns([6, 1])
+            # Back button — always on the right side
+            back_label = "חזור →" if dlang == "he" else "← Back"
+            if dlang == "he":
+                # RTL: CSS reverses columns, so [1,6] puts first col on the right
+                back_col, _ = st.columns([1, 6])
+            else:
+                # LTR: [6,1] puts second col on the right
+                _, back_col = st.columns([6, 1])
             with back_col:
-                back_label = "חזור →" if dlang == "he" else "← Back"
                 if st.button(back_label, key="back_btn", use_container_width=True):
                     if "query_input" in st.session_state:
                         del st.session_state["query_input"]
