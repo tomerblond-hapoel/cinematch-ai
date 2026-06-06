@@ -898,8 +898,16 @@ def main():
                     query, catalog, embeddings, numeric_matrix, encoder, threshold, lang)
             st.session_state.detected_lang = detected_lang
 
-            dlang = detected_lang  # use query language for ALL result display
+            dlang = detected_lang
             dlang_dir = "rtl" if dlang == "he" else "ltr"
+
+            # Back button
+            back_label = "🔙 חיפוש חדש" if dlang == "he" else "🔙 New Search"
+            if st.button(back_label, key="back_btn"):
+                if "query_input" in st.session_state:
+                    del st.session_state["query_input"]
+                st.session_state.auto_search = False
+                st.rerun()
 
             if anomalous:
                 st.markdown(f'<div class="cm-anomaly" dir="{dlang_dir}">{t("anomaly_warning", dlang)}</div>',
