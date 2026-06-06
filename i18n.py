@@ -3,7 +3,7 @@
 STRINGS = {
     "en": {
         "app_title":        "CineMatch AI",
-        "app_subtitle":     "Your bilingual AI-powered TV & Movie Recommender",
+        "app_subtitle":     "Your AI-powered TV & Movie Recommender",
         "query_placeholder":"e.g. 'I just finished Breaking Bad, want something darker but shorter'",
         "query_label":      "What are you in the mood to watch?",
         "search_btn":       "🔍 Search",
@@ -40,7 +40,7 @@ STRINGS = {
     },
     "he": {
         "app_title":        "CineMatch AI",
-        "app_subtitle":     "הממליץ הדו-לשוני שלך לסדרות וסרטים מבוסס בינה מלאכותית",
+        "app_subtitle":     "הממליץ שלך לסדרות מבוסס בינה מלאכותית",
         "query_placeholder":"למשל: 'סיימתי את Breaking Bad, רוצה משהו אפל אבל קצר יותר'",
         "query_label":      "על מה בא לך לצפות?",
         "search_btn":       "🔍 חיפוש",
