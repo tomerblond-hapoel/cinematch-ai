@@ -920,18 +920,6 @@ def main():
                     "query": query, "recs": [r["title"] for r in recs],
                 })
 
-        if st.session_state.history:
-            recent_label = "🕓 חיפושים אחרונים" if lang == "he" else "🕓 Recent searches"
-            with st.expander(recent_label):
-                for h in reversed(st.session_state.history[-5:]):
-                    is_he = bool(__import__("re").search(r"[֐-׿]", h["query"]))
-                    d = "rtl" if is_he else "ltr"
-                    ta = "right" if is_he else "left"
-                    st.markdown(
-                        f'<div style="direction:{d};text-align:{ta};padding:4px 0;border-bottom:1px solid #252b3d;">'
-                        f'<strong>{h["query"]}</strong> → {", ".join(h["recs"])}</div>',
-                        unsafe_allow_html=True
-                    )
 
     with tab2:
         render_research_tab(catalog, log, eval_res, trends, lang)
