@@ -1,33 +1,52 @@
 """
 CineMatch AI — LLM Agent
-Two Claude calls per query:
-  1. Intent parser: NL query → structured JSON (seeds, mood, lang, length_pref, exclude)
-  2. Explanation generator: recommendations → bilingual natural-language explanation
-
-Uses Claude claude-sonnet-4-6 with prompt caching on the system prompt (5-min TTL).
-Falls back to regex parser if ANTHROPIC_API_KEY is not set.
+Supports Gemini (primary, free) and Claude (fallback).
+Priority: GEMINI_API_KEY → ANTHROPIC_API_KEY → offline regex fallback.
 """
 
 import os, re, json
 from typing import Optional
-import anthropic
 
-_client: Optional[anthropic.Anthropic] = None
-USING_LLM = False
+# ── Client state ───────────────────────────────────────────────────────────────
+
+_gemini_model = None
+_anthropic_client = None
+_provider = None  # "gemini" | "anthropic" | None
+
 
 def _get_client():
-    global _client, USING_LLM
-    if _client is not None:
-        return _client
-    key = os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_KEY")
-    if not key:
-        return None
-    _client = anthropic.Anthropic(api_key=key)
-    USING_LLM = True
-    return _client
+    global _gemini_model, _anthropic_client, _provider
+    if _provider is not None:
+        return True
+
+    # Try Gemini first
+    gemini_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+    if gemini_key:
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=gemini_key)
+            _gemini_model = genai.GenerativeModel("gemini-1.5-flash")
+            _provider = "gemini"
+            return True
+        except Exception:
+            pass
+
+    # Fallback to Anthropic
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_KEY")
+    if anthropic_key:
+        try:
+            import anthropic
+            _anthropic_client = anthropic.Anthropic(api_key=anthropic_key)
+            _provider = "anthropic"
+            return True
+        except Exception:
+            pass
+
+    _provider = None
+    return None
 
 
-# ── System prompts (cached) ────────────────────────────────────────────────────
+# ── System prompts ─────────────────────────────────────────────────────────────
 
 _PARSER_SYSTEM = """\
 You are an assistant that extracts structured intent from TV/movie recommendation queries.
@@ -54,55 +73,71 @@ Rules:
 
 _EXPLAINER_SYSTEM = """\
 You are a friendly bilingual TV/movie recommendation assistant.
-When lang is "he": reply in Hebrew (RTL). When lang is "en": reply in English.
-Be concise: 2-3 sentences per recommendation.
-Start with a warm opener, then one sentence per show explaining WHY it matches.
+When lang is "he": reply in Hebrew. When lang is "en": reply in English.
+Be concise: 2-3 sentences total. Start with a warm opener, then one sentence per show explaining WHY it matches.
 """
+
+
+# ── LLM call helper ────────────────────────────────────────────────────────────
+
+def _call_llm(system: str, user: str, max_tokens: int = 600) -> Optional[str]:
+    if _provider == "gemini":
+        try:
+            prompt = f"{system}\n\n{user}"
+            response = _gemini_model.generate_content(
+                prompt,
+                generation_config={"max_output_tokens": max_tokens, "temperature": 0.3},
+            )
+            return response.text.strip()
+        except Exception:
+            return None
+
+    if _provider == "anthropic":
+        try:
+            response = _anthropic_client.messages.create(
+                model="claude-sonnet-4-6",
+                max_tokens=max_tokens,
+                system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
+                messages=[{"role": "user", "content": user}],
+            )
+            return response.content[0].text.strip()
+        except Exception:
+            return None
+
+    return None
 
 
 # ── Intent parser ─────────────────────────────────────────────────────────────
 
 def parse_intent(query: str) -> dict:
-    """Parse a natural-language query into structured intent."""
-    client = _get_client()
-    if client is None:
+    if not _get_client():
         return _regex_parse(query)
 
-    try:
-        response = client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=512,
-            system=[{
-                "type": "text",
-                "text": _PARSER_SYSTEM,
-                "cache_control": {"type": "ephemeral"},
-            }],
-            messages=[{"role": "user", "content": f"Query: {query}"}],
-        )
-        raw = response.content[0].text.strip()
-        # strip markdown code fences if present
-        raw = re.sub(r"^```[a-z]*\n?", "", raw)
-        raw = re.sub(r"\n?```$", "", raw)
-        parsed = json.loads(raw)
-        parsed.setdefault("free_text", query)
-        return parsed
-    except Exception as e:
-        return _regex_parse(query)
+    raw = _call_llm(_PARSER_SYSTEM, f"Query: {query}", max_tokens=512)
+    if raw:
+        try:
+            raw = re.sub(r"^```[a-z]*\n?", "", raw)
+            raw = re.sub(r"\n?```$", "", raw)
+            parsed = json.loads(raw)
+            parsed.setdefault("free_text", query)
+            return parsed
+        except Exception:
+            pass
+
+    return _regex_parse(query)
 
 
 def _regex_parse(query: str) -> dict:
-    """Offline fallback: simple regex-based intent extraction."""
     q = query.strip()
     has_hebrew = bool(re.search(r"[֐-׿]", q))
     lang = "he" if has_hebrew else "en"
 
-    # Detect mood words
     mood_map = {
-        "dark": ["dark","אפל","כהה","dark","depressing"],
-        "funny": ["funny","comedy","fun","מצחיק","הומור","קומדי"],
-        "emotional": ["emotional","sad","cry","מרגש","עצוב","מדהים"],
+        "dark":      ["dark","אפל","כהה","depressing"],
+        "funny":     ["funny","comedy","fun","מצחיק","הומור","קומדי"],
+        "emotional": ["emotional","sad","cry","מרגש","עצוב"],
         "thrilling": ["thriller","thrill","suspense","מותחן","מפחיד","horror"],
-        "light": ["light","lighthearted","קליל","קל","cheerful"],
+        "light":     ["light","lighthearted","קליל","קל","cheerful"],
     }
     mood = []
     for tag, kws in mood_map.items():
@@ -111,7 +146,6 @@ def _regex_parse(query: str) -> dict:
                 mood.append(tag)
                 break
 
-    # length pref
     if re.search(r"\b(short|קצר|פחות|fewer)\b", q, re.IGNORECASE):
         length_pref = "short"
     elif re.search(r"\b(long|ארוך|epic|longer)\b", q, re.IGNORECASE):
@@ -120,64 +154,35 @@ def _regex_parse(query: str) -> dict:
         length_pref = "any"
 
     return {
-        "seeds": [],
-        "mood": mood,
-        "length_pref": length_pref,
-        "exclude_genres": [],
-        "lang": lang,
-        "free_text": query,
+        "seeds": [], "mood": mood, "length_pref": length_pref,
+        "exclude_genres": [], "lang": lang, "free_text": query,
     }
 
 
 # ── Explanation generator ──────────────────────────────────────────────────────
 
-def explain_recommendations(
-    intent: dict,
-    recommendations: list[dict],
-    lang: str = "en",
-) -> str:
-    """Generate a bilingual explanation for the top recommendations."""
-    client = _get_client()
-
+def explain_recommendations(intent: dict, recommendations: list[dict], lang: str = "en") -> str:
     if not recommendations:
-        if lang == "he":
-            return "לא נמצאו תוצאות מתאימות לחיפוש שלך. נסה שאילתה שונה."
-        return "No matching results found. Try a different query."
+        return "לא נמצאו תוצאות מתאימות." if lang == "he" else "No matching results found."
 
-    if client is None:
+    if not _get_client():
         return _fallback_explanation(intent, recommendations, lang)
 
     recs_text = "\n".join(
         f"{i+1}. {r['title']} ({r.get('decade_str','')}, {r.get('genres','')}) "
-        f"— Rating: {r.get('rating','')} — "
-        f"Hybrid score: {r.get('hybrid_score','')} "
-        f"[Jaccard={r.get('jaccard_score','')} / NumCos={r.get('cosine_numeric_score','')} / TextCos={r.get('cosine_text_score','')}]"
+        f"— Rating: {r.get('rating','')} — Hybrid score: {r.get('hybrid_score','')}"
         for i, r in enumerate(recommendations)
     )
 
     user_msg = (
         f"User query: {intent.get('free_text','')}\n"
-        f"Detected seeds: {intent.get('seeds',[])}\n"
-        f"Mood: {intent.get('mood',[])}\n"
-        f"Language: {lang}\n\n"
+        f"Seeds: {intent.get('seeds',[])}, Mood: {intent.get('mood',[])}, Language: {lang}\n\n"
         f"Recommendations:\n{recs_text}\n\n"
-        f"Write a warm explanation of these recommendations in {'Hebrew' if lang=='he' else 'English'}."
+        f"Write a warm explanation in {'Hebrew' if lang=='he' else 'English'}."
     )
 
-    try:
-        response = client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=600,
-            system=[{
-                "type": "text",
-                "text": _EXPLAINER_SYSTEM,
-                "cache_control": {"type": "ephemeral"},
-            }],
-            messages=[{"role": "user", "content": user_msg}],
-        )
-        return response.content[0].text.strip()
-    except Exception:
-        return _fallback_explanation(intent, recommendations, lang)
+    result = _call_llm(_EXPLAINER_SYSTEM, user_msg, max_tokens=600)
+    return result if result else _fallback_explanation(intent, recommendations, lang)
 
 
 def _fallback_explanation(intent: dict, recommendations: list[dict], lang: str) -> str:
@@ -185,9 +190,8 @@ def _fallback_explanation(intent: dict, recommendations: list[dict], lang: str) 
         lines = ["הנה ההמלצות שלנו עבורך:"]
         for r in recommendations:
             lines.append(f"• {r['title']} ({r.get('genres','')}) — ציון: {r.get('rating','')}")
-        return "\n".join(lines)
     else:
         lines = ["Here are your personalized recommendations:"]
         for r in recommendations:
             lines.append(f"• {r['title']} ({r.get('genres','')}) — Rating: {r.get('rating','')}")
-        return "\n".join(lines)
+    return "\n".join(lines)
