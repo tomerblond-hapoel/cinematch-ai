@@ -589,13 +589,16 @@ def render_result(rec: dict, rank: int, lang: str):
         f'<span style="color:{BRAND["accent"]};font-weight:700;">{hybrid:.0%}</span></div>'
         f'{bar(hybrid, BRAND["accent"])}'
         f'<div style="display:flex;gap:0.75rem;flex-direction:{flex_dir};">'
-        f'<div style="flex:1;"><div style="display:flex;justify-content:space-between;font-size:0.72rem;color:{BRAND["text_muted"]};">'
-        f'<span>{genre_lbl}</span><span style="color:{BRAND["accent"]};font-weight:600;">{j:.0%}</span></div>{bar(j, BRAND["accent"])}</div>'
-        f'<div style="flex:1;"><div style="display:flex;justify-content:space-between;font-size:0.72rem;color:{BRAND["text_muted"]};">'
-        f'<span>{prof_lbl}</span><span style="color:{BRAND["accent_2"]};font-weight:600;">{n:.0%}</span></div>{bar(n, BRAND["accent_2"])}</div>'
-        f'<div style="flex:1;"><div style="display:flex;justify-content:space-between;font-size:0.72rem;color:{BRAND["text_muted"]};">'
-        f'<span>{plot_lbl}</span><span style="color:{BRAND["accent_warm"]};font-weight:600;">{tx:.0%}</span></div>{bar(tx, BRAND["accent_warm"])}</div>'
-        f'</div>'
+        + (f'<div style="flex:1;"><div style="display:flex;justify-content:space-between;font-size:0.72rem;color:{BRAND["text_muted"]};">'
+           f'<span>{genre_lbl}</span><span style="color:{BRAND["accent"]};font-weight:600;">{j:.0%}</span></div>{bar(j, BRAND["accent"])}</div>'
+           if j > 0.01 else '')
+        + (f'<div style="flex:1;"><div style="display:flex;justify-content:space-between;font-size:0.72rem;color:{BRAND["text_muted"]};">'
+           f'<span>{prof_lbl}</span><span style="color:{BRAND["accent_2"]};font-weight:600;">{n:.0%}</span></div>{bar(n, BRAND["accent_2"])}</div>'
+           if n > 0.01 else '')
+        + (f'<div style="flex:1;"><div style="display:flex;justify-content:space-between;font-size:0.72rem;color:{BRAND["text_muted"]};">'
+           f'<span>{plot_lbl}</span><span style="color:{BRAND["accent_warm"]};font-weight:600;">{tx:.0%}</span></div>{bar(tx, BRAND["accent_warm"])}</div>'
+           if tx > 0.01 else '')
+        + f'</div>'
         f'{plot_html}'
         f'</div></div></div>'
     )
@@ -815,6 +818,8 @@ def main():
         st.session_state.history = []
     if "preset_query" not in st.session_state:
         st.session_state.preset_query = ""
+    if "auto_search" not in st.session_state:
+        st.session_state.auto_search = False
 
     lang = st.session_state.lang
     inject_css(lang)
@@ -871,12 +876,18 @@ def main():
         with c_btn:
             search_clicked = st.button(t("search_btn", lang), type="primary", use_container_width=True)
 
+        # Auto-search when chip was clicked
+        if st.session_state.auto_search and query.strip():
+            st.session_state.auto_search = False
+            search_clicked = True
+
         # Example chips
         if not query and not search_clicked:
             st.caption(("💡 דוגמאות:" if lang == "he" else "💡 Try one of these:"))
             picked = render_example_chips(lang)
             if picked:
                 st.session_state.preset_query = picked
+                st.session_state.auto_search = True
                 st.rerun()
 
         if search_clicked and query.strip():
