@@ -1,7 +1,6 @@
 """
 CineMatch AI — LLM Agent
-Supports Gemini (primary, free) and Claude (fallback).
-Priority: GEMINI_API_KEY → ANTHROPIC_API_KEY → offline regex fallback.
+Priority: GROQ_API_KEY → ANTHROPIC_API_KEY → offline regex fallback.
 """
 
 import os, re, json
@@ -9,14 +8,12 @@ from typing import Optional
 
 # ── Client state ───────────────────────────────────────────────────────────────
 
-_gemini_model = None
+_groq_client = None
 _anthropic_client = None
-_provider = None  # "gemini" | "anthropic" | None
+_provider = None  # "groq" | "anthropic" | None
 
 
 def _read_secret(key: str) -> Optional[str]:
-    """Read a secret from st.secrets (Streamlit Cloud) or os.environ (local)."""
-    # 1. Try st.secrets first (Streamlit Cloud & local .streamlit/secrets.toml)
     try:
         import streamlit as st
         val = st.secrets.get(key)
@@ -24,28 +21,26 @@ def _read_secret(key: str) -> Optional[str]:
             return str(val)
     except Exception:
         pass
-    # 2. Fallback to environment variable
     return os.environ.get(key)
 
 
 def _get_client():
-    global _gemini_model, _anthropic_client, _provider
+    global _groq_client, _anthropic_client, _provider
     if _provider is not None:
         return True
 
-    # Try Gemini first
-    gemini_key = _read_secret("GEMINI_API_KEY") or _read_secret("GOOGLE_API_KEY")
-    if gemini_key:
+    # Primary: Groq
+    groq_key = _read_secret("GROQ_API_KEY")
+    if groq_key:
         try:
-            import google.generativeai as genai
-            genai.configure(api_key=gemini_key)
-            _gemini_model = genai.GenerativeModel("gemini-2.0-flash-lite")
-            _provider = "gemini"
+            from groq import Groq
+            _groq_client = Groq(api_key=groq_key)
+            _provider = "groq"
             return True
         except Exception:
             pass
 
-    # Fallback to Anthropic
+    # Fallback: Anthropic
     anthropic_key = _read_secret("ANTHROPIC_API_KEY") or _read_secret("ANTHROPIC_KEY")
     if anthropic_key:
         try:
@@ -95,11 +90,17 @@ Be concise: 2-3 sentences total. Start with a warm opener, then one sentence per
 # ── LLM call helper ────────────────────────────────────────────────────────────
 
 def _call_llm(system: str, user: str, max_tokens: int = 600) -> Optional[str]:
-    if _provider == "gemini":
+    if _provider == "groq":
         try:
-            prompt = f"{system}\n\n{user}"
-            response = _gemini_model.generate_content(prompt)
-            return response.text.strip()
+            response = _groq_client.chat.completions.create(
+                model="llama-3.1-8b-instant",
+                max_tokens=max_tokens,
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+            )
+            return response.choices[0].message.content.strip()
         except Exception:
             return None
 
