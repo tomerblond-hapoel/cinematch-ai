@@ -174,6 +174,7 @@ def inject_css(lang: str):
         direction: auto !important;
         text-align: start !important;
         unicode-bidi: plaintext !important;
+        padding-right: 140px !important;
         transition: all 0.2s ease !important;
     }}
     .stTextInput > div > div > input:focus {{
