@@ -251,10 +251,15 @@ def inject_css(lang: str):
         color: {BRAND['text']} !important;
         box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
     }}
-    /* Hero */
+    /* Hero — always centered regardless of direction */
     .cm-hero {{
-        text-align: center;
+        text-align: center !important;
         padding: 2rem 0 1.5rem;
+        direction: ltr !important;
+    }}
+    .cm-hero-title, .cm-hero-sub, .cm-badge-row {{
+        text-align: center !important;
+        direction: ltr !important;
     }}
     .cm-hero-title {{
         font-size: 3.5rem;
@@ -944,9 +949,10 @@ def main():
             dlang_dir = "rtl" if dlang == "he" else "ltr"
 
             # Back button — top left
-            _, back_col = st.columns([6, 1]) if dlang == "he" else st.columns([1, 6])
+            # Always: [wide, narrow] — narrow col is always on the RIGHT
+            _, back_col = st.columns([6, 1])
             with back_col:
-                back_label = "→ חזור" if dlang == "he" else "← Back"
+                back_label = "חזור →" if dlang == "he" else "← Back"
                 if st.button(back_label, key="back_btn", use_container_width=True):
                     if "query_input" in st.session_state:
                         del st.session_state["query_input"]
