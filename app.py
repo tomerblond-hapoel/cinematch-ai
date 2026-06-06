@@ -993,13 +993,18 @@ def main():
             if not recs:
                 st.info(t("no_results", dlang))
             else:
+                t_align_d = "right" if dlang == "he" else "left"
+                flex_dir_d = "row-reverse" if dlang == "he" else "row"
                 st.markdown(
                     f'<div class="cm-explanation" dir="{dlang_dir}" '
-                    f'style="text-align:{"right" if dlang=="he" else "left"};">💬 {explanation}</div>',
+                    f'style="text-align:{t_align_d};direction:{dlang_dir};">💬 {explanation}</div>',
                     unsafe_allow_html=True)
                 results_title = "ההמלצות שלנו" if dlang == "he" else "Top Recommendations"
-                st.markdown(f'<div class="cm-section-h">🎬 {results_title}</div>',
-                            unsafe_allow_html=True)
+                st.markdown(
+                    f'<div class="cm-section-h" dir="{dlang_dir}" '
+                    f'style="direction:{dlang_dir};justify-content:flex-{'end' if dlang=='he' else 'start'};flex-direction:{flex_dir_d};">'
+                    f'🎬 {results_title}</div>',
+                    unsafe_allow_html=True)
                 for i, rec in enumerate(recs, 1):
                     render_result(rec, i, dlang)
 
