@@ -504,8 +504,20 @@ def run_search(query: str, catalog, embeddings, numeric_matrix, encoder, thresho
 # ── Result rendering ──────────────────────────────────────────────────────────
 
 def render_result(rec: dict, rank: int, lang: str):
+    is_rtl   = lang == "he"
+    dir_attr = "rtl" if is_rtl else "ltr"
+    flex_dir = "row-reverse" if is_rtl else "row"
+    t_align  = "right" if is_rtl else "left"
+
     poster = rec.get("poster_path", "")
     poster_url = f"https://image.tmdb.org/t/p/w154{poster}" if poster.startswith("/") else ""
+    poster_html = (
+        f'<img src="{poster_url}" style="width:90px;border-radius:10px;display:block;" '
+        f'onerror="this.parentNode.innerHTML=\'🎬\'">'
+        if poster_url else
+        f'<div style="width:90px;height:135px;background:{BRAND["bg_card_alt"]};border-radius:10px;'
+        f'display:flex;align-items:center;justify-content:center;font-size:2rem;">🎬</div>'
+    )
 
     hybrid = float(rec.get("hybrid_score", rec.get("cosine_text_score", 0)) or 0)
     j  = float(rec.get("jaccard_score", 0) or 0)
@@ -516,87 +528,87 @@ def render_result(rec: dict, rank: int, lang: str):
     rating_str = f"{rating:.1f}" if isinstance(rating, (int, float)) else str(rating)
     decade = rec.get("decade_str", "")
     genres = rec.get("genres", "")
-    ov = rec.get("overview", "") or ""
+    ov     = (rec.get("overview", "") or "")[:450]
+    title  = rec.get("title", "")
+
+    def bar(val, color):
+        w = max(0, min(1, val)) * 100
+        return (
+            f'<div style="background:rgba(255,255,255,0.07);border-radius:6px;height:6px;'
+            f'overflow:hidden;margin:3px 0 10px;">'
+            f'<div style="width:{w:.0f}%;height:100%;background:{color};border-radius:6px;"></div></div>'
+        )
+
+    score_lbl  = "התאמה" if is_rtl else "Match Score"
+    genre_lbl  = "ז'אנר"  if is_rtl else "Genre"
+    prof_lbl   = "פרופיל" if is_rtl else "Profile"
+    plot_lbl   = "עלילה"  if is_rtl else "Plot"
+
+    plot_html = (
+        f'<details style="margin-top:0.6rem;">'
+        f'<summary style="cursor:pointer;color:{BRAND["text_muted"]};font-size:0.83rem;'
+        f'list-style:none;user-select:none;">📖 {plot_lbl}</summary>'
+        f'<p style="margin-top:0.5rem;color:{BRAND["text"]};font-size:0.88rem;'
+        f'line-height:1.65;direction:{dir_attr};text-align:{t_align};">'
+        f'{ov}{"…" if len(ov) >= 450 else ""}</p></details>'
+        if ov and len(ov) > 20 else ""
+    )
 
     award_prob = rec.get("award_probability", None)
-    award_badge = ""
+    award_html = ""
     if award_prob is not None:
         try:
             p = float(award_prob)
             if p >= 0.75:
-                label = "מועמד חזק לאמי/אוסקר" if lang == "he" else "Strong Emmy/Oscar candidate"
-                award_badge = f'<span class="cm-badge cm-badge-accent" style="margin-left:0.5rem;">🏆 {label} · {p:.0%}</span>'
+                lbl = "מועמד חזק לפרס" if is_rtl else "Strong Award Candidate"
+                award_html = f'<span class="cm-badge cm-badge-accent" style="margin:0 0.4rem;">🏆 {lbl} {p:.0%}</span>'
             elif p >= 0.50:
-                label = "מועמד אפשרי" if lang == "he" else "Possible nominee"
-                award_badge = f'<span class="cm-badge" style="margin-left:0.5rem;">⭐ {label} · {p:.0%}</span>'
+                lbl = "מועמד אפשרי" if is_rtl else "Possible Nominee"
+                award_html = f'<span class="cm-badge" style="margin:0 0.4rem;">⭐ {lbl} {p:.0%}</span>'
         except (TypeError, ValueError):
             pass
 
-    dir_style = 'direction:rtl;text-align:right;' if lang == 'he' else 'direction:ltr;text-align:left;'
-    rank_margin = 'margin-left:12px;' if lang == 'he' else 'margin-right:12px;'
-    flex_dir = 'row-reverse' if lang == 'he' else 'row'
+    st.markdown(f"""
+    <div class="cm-result" dir="{dir_attr}" style="text-align:{t_align};">
+      <div style="display:flex;gap:1rem;align-items:flex-start;flex-direction:{flex_dir};">
+        <div style="flex:0 0 auto;">{poster_html}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:0.5rem;flex-direction:{flex_dir};margin-bottom:0.2rem;">
+            <span class="cm-rank">{rank}</span>
+            <span style="font-size:1.25rem;font-weight:700;color:{BRAND['text']};">{title}</span>
+            {award_html}
+          </div>
+          <div class="cm-meta">⭐ {rating_str} &nbsp;·&nbsp; {decade} &nbsp;·&nbsp; {genres}</div>
 
-    st.markdown(f'<div class="cm-result" style="{dir_style}">', unsafe_allow_html=True)
-    c_img, c_main = st.columns([1, 5]) if lang == 'en' else st.columns([5, 1])
-    img_col = c_img if lang == 'en' else c_main
-    txt_col = c_main if lang == 'en' else c_img
-    with img_col:
-        if poster_url:
-            st.image(poster_url, use_container_width=True)
-        else:
-            st.markdown(
-                f"<div style='width:100%;aspect-ratio:2/3;background:{BRAND['bg_card_alt']};"
-                f"border-radius:10px;display:flex;align-items:center;justify-content:center;"
-                f"font-size:2.5rem;color:{BRAND['text_muted']};'>🎬</div>",
-                unsafe_allow_html=True
-            )
-    with txt_col:
-        st.markdown(
-            f'<div style="display:flex;align-items:center;flex-direction:{flex_dir};{dir_style}">'
-            f'<span class="cm-rank" style="{rank_margin}">{rank}</span>'
-            f'<div style="{dir_style}"><div class="cm-title">{rec.get("title","")}{award_badge}</div>'
-            f'<div class="cm-meta">⭐ {rating_str} · {decade} · {genres}</div></div>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
+          <div style="display:flex;justify-content:space-between;font-size:0.78rem;
+                      color:{BRAND['text_muted']};margin-top:0.6rem;">
+            <span><strong>{score_lbl}</strong></span>
+            <span style="color:{BRAND['accent']};font-weight:700;">{hybrid:.0%}</span>
+          </div>
+          {bar(hybrid, BRAND['gradient_1'])}
 
-        # Hybrid score gauge
-        st.markdown(
-            f'<div class="cm-score-label" style="{dir_style}">'
-            f'<span><strong>{t("score", lang)}</strong></span>'
-            f'<span style="color:{BRAND["accent"]};font-weight:700;">{hybrid:.0%}</span>'
-            f'</div>'
-            f'<div class="cm-score-bar-bg"><div class="cm-score-bar-fill" style="width:{hybrid*100:.0f}%;"></div></div>',
-            unsafe_allow_html=True
-        )
-
-        # Three sub-scores
-        sc1, sc2, sc3 = st.columns(3)
-        for col, name, val, color in [
-            (sc1, t("jaccard", lang),    j,  BRAND["accent"]),
-            (sc2, t("num_cosine", lang), n,  BRAND["accent_2"]),
-            (sc3, t("text_cosine", lang),tx, BRAND["accent_warm"]),
-        ]:
-            col.markdown(
-                f'<div class="cm-score-label" style="{dir_style}">'
-                f'<span style="font-size:0.75rem;">{name}</span>'
-                f'<span style="font-size:0.75rem;color:{color};font-weight:600;">{val:.0%}</span>'
-                f'</div>'
-                f'<div class="cm-score-bar-bg"><div class="cm-score-bar-fill" style="width:{max(0,val)*100:.0f}%;background:{color};"></div></div>',
-                unsafe_allow_html=True
-            )
-
-        if ov and len(ov) > 20:
-            plot_label = "📖 עלילה" if lang == "he" else "📖 Plot"
-            with st.expander(plot_label):
-                st.markdown(
-                    f'<div style="{dir_style}padding:0.25rem 0;">'
-                    f'{ov[:500] + ("..." if len(ov) > 500 else "")}'
-                    f'</div>',
-                    unsafe_allow_html=True
-                )
-
-    st.markdown('</div>', unsafe_allow_html=True)
+          <div style="display:flex;gap:0.75rem;flex-direction:{flex_dir};">
+            <div style="flex:1;">
+              <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:{BRAND['text_muted']};">
+                <span>{genre_lbl}</span><span style="color:{BRAND['accent']};font-weight:600;">{j:.0%}</span>
+              </div>{bar(j, BRAND['accent'])}
+            </div>
+            <div style="flex:1;">
+              <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:{BRAND['text_muted']};">
+                <span>{prof_lbl}</span><span style="color:{BRAND['accent_2']};font-weight:600;">{n:.0%}</span>
+              </div>{bar(n, BRAND['accent_2'])}
+            </div>
+            <div style="flex:1;">
+              <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:{BRAND['text_muted']};">
+                <span>{plot_lbl}</span><span style="color:{BRAND['accent_warm']};font-weight:600;">{tx:.0%}</span>
+              </div>{bar(tx, BRAND['accent_warm'])}
+            </div>
+          </div>
+          {plot_html}
+        </div>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 
 # ── Research tab ──────────────────────────────────────────────────────────────
@@ -893,7 +905,7 @@ def main():
                 st.markdown(f'<div class="cm-section-h">🎬 {t("results_title", lang)}</div>',
                             unsafe_allow_html=True)
                 for i, rec in enumerate(recs, 1):
-                    render_result(rec, i, lang)
+                    render_result(rec, i, detected_lang)
 
                 st.session_state.history.append({
                     "query": query, "recs": [r["title"] for r in recs],

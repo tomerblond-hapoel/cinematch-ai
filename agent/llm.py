@@ -84,12 +84,9 @@ def _call_llm(system: str, user: str, max_tokens: int = 600) -> Optional[str]:
     if _provider == "gemini":
         try:
             prompt = f"{system}\n\n{user}"
-            response = _gemini_model.generate_content(
-                prompt,
-                generation_config={"max_output_tokens": max_tokens, "temperature": 0.3},
-            )
+            response = _gemini_model.generate_content(prompt)
             return response.text.strip()
-        except Exception:
+        except Exception as e:
             return None
 
     if _provider == "anthropic":
